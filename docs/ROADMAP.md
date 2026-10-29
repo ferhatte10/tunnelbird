@@ -1,6 +1,7 @@
 # Roadmap
 
 What is done lives in the README; this file lists what comes next, in order.
+Detailed plans: `docs/plans/` (CI and releases, website, later features).
 
 ## 1. Public repository
 
