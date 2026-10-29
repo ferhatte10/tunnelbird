@@ -42,6 +42,19 @@ trait NetworkManager {
 
     fn deactivate_connection(&self, active_connection: &ObjectPath<'_>) -> zbus::Result<()>;
 
+    #[allow(clippy::type_complexity)]
+    fn add_and_activate_connection2(
+        &self,
+        connection: HashMap<&str, HashMap<&str, Variant<'_>>>,
+        device: &ObjectPath<'_>,
+        specific_object: &ObjectPath<'_>,
+        options: HashMap<&str, Variant<'_>>,
+    ) -> zbus::Result<(
+        OwnedObjectPath,
+        OwnedObjectPath,
+        HashMap<String, OwnedVariant>,
+    )>;
+
     fn get_all_devices(&self) -> zbus::Result<Vec<OwnedObjectPath>>;
 
     #[zbus(property)]
@@ -97,6 +110,10 @@ trait NmActive {
     /// True when this connection holds the default IPv4 route.
     #[zbus(property, name = "Default")]
     fn is_default(&self) -> zbus::Result<bool>;
+
+    /// True when this connection holds the default IPv6 route.
+    #[zbus(property, name = "Default6")]
+    fn is_default6(&self) -> zbus::Result<bool>;
 
     #[zbus(property)]
     fn devices(&self) -> zbus::Result<Vec<OwnedObjectPath>>;
@@ -168,6 +185,9 @@ pub struct Tunnel {
     pub addresses: Vec<String>,
     /// True when all internet traffic goes through the tunnel (`AllowedIPs` has a `/0`).
     pub full_tunnel: bool,
+    /// Connected and holding the default IPv6 route. A full tunnel without it
+    /// would let IPv6 traffic leave outside the VPN (see `needs_ipv6_guard`).
+    pub carries_ipv6: bool,
     /// Well-known VPN provider recognised from the settings (see `provider.rs`).
     pub provider: Option<&'static str>,
     pub state: TunnelState,
@@ -181,6 +201,8 @@ struct Active {
     state: TunnelState,
     /// True when it holds the default route (all traffic goes through it).
     is_default: bool,
+    /// The same for IPv6.
+    is_default6: bool,
     /// OpenVPN: the interface NetworkManager created and its addresses.
     link: Option<(String, Vec<String>)>,
 }
@@ -255,6 +277,9 @@ impl Nm {
                 endpoint: endpoint.as_deref(),
                 dns: &dns,
             });
+            let carries_ipv6 = active
+                .as_ref()
+                .is_some_and(|a| a.state == TunnelState::Connected && a.is_default6);
             let (state, active_path) = match active {
                 Some(active) => (active.state, Some(active.path)),
                 None => (TunnelState::Disconnected, None),
@@ -268,6 +293,7 @@ impl Nm {
                 provider,
                 addresses,
                 full_tunnel,
+                carries_ipv6,
                 uuid,
                 state,
                 active_path,
@@ -302,12 +328,14 @@ impl Nm {
             };
             if let Ok(uuid) = proxy.uuid().await {
                 let is_default = proxy.is_default().await.unwrap_or(false);
+                let is_default6 = proxy.is_default6().await.unwrap_or(false);
                 active.insert(
                     uuid,
                     Active {
                         path,
                         state,
                         is_default,
+                        is_default6,
                         link,
                     },
                 );
@@ -397,6 +425,39 @@ impl Nm {
             .await?
             .deactivate_connection(active)
             .await
+    }
+
+    /// Turns the IPv6 guard on or off (see `needs_ipv6_guard`). The guard is
+    /// an in-memory dummy connection whose two `unreachable` routes (`::/1`,
+    /// `8000::/1`) are more specific than any default route, so IPv6 to the
+    /// internet fails at once and applications fall back to IPv4, which goes
+    /// through the tunnel. The local network (its own `/64`, `fe80::/10`) is
+    /// more specific still and keeps working. NetworkManager forgets the
+    /// connection when it is deactivated, and at the latest on restart.
+    pub async fn set_ipv6_guard(&self, on: bool) -> zbus::Result<()> {
+        let nm = NetworkManagerProxy::new(&self.conn).await?;
+        let mut guard = None;
+        for path in nm.active_connections().await? {
+            let proxy = NmActiveProxy::builder(&self.conn)
+                .path(path.clone())
+                .build()
+                .await?;
+            if proxy.uuid().await.ok().as_deref() == Some(IPV6_GUARD_UUID) {
+                guard = Some(path);
+                break;
+            }
+        }
+        match (on, guard) {
+            (true, None) => {
+                let root = ObjectPath::from_static_str_unchecked("/");
+                let options = HashMap::from([("persist", Variant::from("volatile"))]);
+                nm.add_and_activate_connection2(ipv6_guard_settings(), &root, &root, options)
+                    .await?;
+            }
+            (false, Some(path)) => nm.deactivate_connection(&path).await?,
+            _ => {}
+        }
+        Ok(())
     }
 
     /// Names of the Wi-Fi networks saved on this computer, sorted, without duplicates.
@@ -1063,6 +1124,62 @@ fn ip_settings(config: &WgConfig, v4: bool) -> HashMap<&'static str, Variant<'st
     ip
 }
 
+/// Fixed identity of the IPv6 guard, so it is found again after a restart.
+const IPV6_GUARD_UUID: &str = "6b7e0d9c-4f3a-4c1e-9a52-7d1f3e8b2a64";
+const IPV6_GUARD_NAME: &str = "Tunnelbird IPv6 protection";
+const IPV6_GUARD_INTERFACE: &str = "tunnelbird-v6";
+
+/// True when the connected tunnel carries all IPv4 traffic but not IPv6:
+/// IPv6 would then reach the internet outside the VPN, revealing the real
+/// address (most OpenVPN servers and some WireGuard® files are IPv4 only).
+pub fn needs_ipv6_guard(tunnels: &[Tunnel]) -> bool {
+    tunnels
+        .iter()
+        .any(|t| t.state == TunnelState::Connected && t.full_tunnel && !t.carries_ipv6)
+}
+
+fn ipv6_guard_settings() -> HashMap<&'static str, HashMap<&'static str, Variant<'static>>> {
+    let unreachable = |dest: &str| {
+        HashMap::from([
+            ("dest", Variant::from(dest.to_owned())),
+            ("prefix", Variant::from(1u32)),
+            ("type", Variant::from("unreachable")),
+        ])
+    };
+    // A unique local address: the interface needs one to hold the routes.
+    let address = HashMap::from([
+        ("address", Variant::from("fd8a:7f7e:6c1d:42::2")),
+        ("prefix", Variant::from(64u32)),
+    ]);
+    HashMap::from([
+        (
+            "connection",
+            HashMap::from([
+                ("id", Variant::from(IPV6_GUARD_NAME)),
+                ("uuid", Variant::from(IPV6_GUARD_UUID)),
+                ("type", Variant::from("dummy")),
+                ("interface-name", Variant::from(IPV6_GUARD_INTERFACE)),
+                ("autoconnect", Variant::from(false)),
+            ]),
+        ),
+        (
+            "ipv4",
+            HashMap::from([("method", Variant::from("disabled"))]),
+        ),
+        (
+            "ipv6",
+            HashMap::from([
+                ("method", Variant::from("manual")),
+                ("address-data", Variant::from(vec![address])),
+                (
+                    "route-data",
+                    Variant::from(vec![unreachable("::"), unreachable("8000::")]),
+                ),
+            ]),
+        ),
+    ])
+}
+
 fn net_to_string(net: &IpNet) -> String {
     format!("{}/{}", net.addr, net.prefix)
 }
@@ -1143,4 +1260,41 @@ fn openvpn_settings<'a>(
 /// A file error (writing certificates) reported like a D-Bus one.
 fn io_error(err: std::io::Error) -> zbus::Error {
     zbus::Error::Failure(err.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tunnel(state: TunnelState, full_tunnel: bool, carries_ipv6: bool) -> Tunnel {
+        Tunnel {
+            path: "/t".try_into().unwrap(),
+            uuid: "u".to_owned(),
+            name: "Stockholm".to_owned(),
+            kind: Kind::OpenVpn,
+            interface: "tun0".to_owned(),
+            endpoint: None,
+            addresses: Vec::new(),
+            full_tunnel,
+            carries_ipv6,
+            provider: None,
+            state,
+            active_path: None,
+        }
+    }
+
+    #[test]
+    fn ipv6_is_blocked_only_around_an_ipv4_only_full_tunnel() {
+        use TunnelState::*;
+        // IPv4 only, all traffic: IPv6 would leak.
+        assert!(needs_ipv6_guard(&[tunnel(Connected, true, false)]));
+        // IPv6 through the tunnel too: nothing to block.
+        assert!(!needs_ipv6_guard(&[tunnel(Connected, true, true)]));
+        // Split tunnel: the rest of the traffic is meant to go outside.
+        assert!(!needs_ipv6_guard(&[tunnel(Connected, false, false)]));
+        // Not connected (yet): the network is left alone.
+        assert!(!needs_ipv6_guard(&[tunnel(Connecting, true, false)]));
+        assert!(!needs_ipv6_guard(&[tunnel(Disconnected, true, false)]));
+        assert!(!needs_ipv6_guard(&[]));
+    }
 }
