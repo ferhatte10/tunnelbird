@@ -1,0 +1,20 @@
+[package]
+name = "tunnelbird-core"
+version = "0.1.0"
+edition = "2024"
+description = "Tunnelbird's shared logic: tunnel file parsers, providers, trusted networks, versions"
+license = "GPL-3.0-or-later"
+authors = ["Ferhat Saidoun"]
+publish = false
+
+[features]
+default = ["gettext"]
+# Messages translated through the system's gettext (the Linux app). The
+# Windows and macOS services build without it: messages stay in English.
+gettext = ["dep:gettext-rs"]
+
+[dependencies]
+base64 = "0.23.1"
+gettext-rs = { version = "0.8.0", features = ["gettext-system"], optional = true }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"

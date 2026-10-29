@@ -1,0 +1,57 @@
+name: Service
+
+# The shared core and the tunnel service on Windows and macOS (docs/WINDOWS.md, docs/MACOS.md):
+# lint and tests on the real systems. Only when that code changes: these runners cost more minutes
+# while the repository is private.
+
+on:
+  pull_request:
+    paths:
+      - crates/**
+      - Cargo.lock
+      - .github/workflows/service.yml
+  push:
+    branches:
+      - main
+    paths:
+      - crates/**
+      - Cargo.lock
+      - .github/workflows/service.yml
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  service:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Rust (stable, with clippy)
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy
+          rustup default stable
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+
+      # The core without gettext: Windows and macOS translate in their own UI.
+      - name: Clippy
+        run: cargo clippy --locked -p tunnelbird-core --no-default-features -p tunnelbird-service --all-targets -- -D warnings
+
+      - name: Tests
+        run: cargo test --locked -p tunnelbird-core --no-default-features -p tunnelbird-service
+
+      - name: Release build
+        run: cargo build --locked --release -p tunnelbird-service

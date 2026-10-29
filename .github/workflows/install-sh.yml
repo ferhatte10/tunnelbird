@@ -1,0 +1,53 @@
+name: install.sh
+
+# The one-command installer served by the website, in a clean container of each family: it must
+# pick the right method and show every step (--dry-run changes nothing).
+
+on:
+  pull_request:
+    paths:
+      - build-aux/install.sh
+      - .github/workflows/install-sh.yml
+  push:
+    branches:
+      - main
+    paths:
+      - build-aux/install.sh
+      - .github/workflows/install-sh.yml
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu 24.04
+            image: ubuntu:24.04@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852
+            method: apt
+          - name: Debian 13
+            image: debian:13@sha256:2dc419c6d7fe3dad0a2f9fd469c34cc90b0f9ba642d8fde837fe3d7d34a0e7f1
+            method: apt
+          - name: Fedora 42
+            image: fedora:42@sha256:99e203b80b1c3d8f7e161ec10a68fd02b081ef83a3963553e513c82846b97814
+            method: dnf
+          - name: Arch Linux
+            image: archlinux:latest@sha256:e82623936fa1a69700b48e98b058df6eaab18b737c27473a7234a40fdecb9413
+            method: flatpak
+    name: ${{ matrix.name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Dry run
+        env:
+          IMAGE: ${{ matrix.image }}
+          METHOD: ${{ matrix.method }}
+        run: |
+          docker run --rm -v "$PWD/build-aux/install.sh:/install.sh:ro" "$IMAGE" sh /install.sh --dry-run | tee out.txt
+          grep -qi "$METHOD" out.txt || { echo "::error::expected the $METHOD method"; exit 1; }
