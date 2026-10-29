@@ -1,0 +1,22 @@
+/* Tunnelbird styles, loaded on top of libadwaita (see `load_css` in src/main.rs).
+   Colours derive from `currentColor`, so they follow the light and dark styles. */
+
+/* The default row hover (about 3 %) is hard to see: make the tunnel under the
+   pointer clearly stand out from the others. */
+.tunnel-list > row.activatable:hover {
+  background-color: alpha(currentColor, 0.07);
+}
+
+.tunnel-list > row.activatable:active {
+  background-color: alpha(currentColor, 0.12);
+}
+
+/* Editor validation message: the error colour of the current style. */
+banner.tunnel-error > revealer > widget {
+  background-color: alpha(@error_bg_color, 0.18);
+}
+
+banner.tunnel-error > revealer > widget label {
+  color: @error_color;
+  font-weight: bold;
+}

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Top bar icon, no tunnel: grey triangle and open padlock. -->
+  <g transform="translate(0.5 3.2) scale(0.0625)">
+    <path d="M239,10 L236,12 L17,377 L16,379 L17,382 L19,382 L21,381 L200,202 L217,180 L226,165 L237,140 L240,131 L240,128 L244,115 L244,111 L245,110 L245,105 L246,104 L246,97 L247,96 L247,13 L244,10 Z" fill="#9a9996"/><path d="M239,265 L139,296 L126,301 L106,311 L96,317 L80,329 L70,338 L24,384 L23,389 L29,389 L243,300 L247,296 L247,268 L244,265 Z" fill="#9a9996"/>
+    <path d="M256,10 L254,11 L252,14 L252,89 L253,90 L253,100 L254,101 L254,107 L255,108 L255,113 L257,118 L257,122 L264,144 L269,154 L269,156 L278,173 L295,197 L480,382 L482,382 L483,381 L482,376 L266,16 L264,13 L260,10 Z" fill="#77767b"/><path d="M256,265 L254,266 L252,269 L252,295 L255,299 L471,389 L476,389 L477,386 L423,332 L409,321 L395,312 L376,302 L366,298 L261,265 Z" fill="#77767b"/>
+  </g>
+  <path d="M13.4 17.3 V13.5 A2.6 2.6 0 0 1 18.6 13.5 V14.1" fill="none" stroke="#0d1118" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M13.4 17.3 V13.5 A2.6 2.6 0 0 1 18.6 13.5 V14.1" fill="none" stroke="#ffffff" stroke-width="1.7" stroke-linecap="round"/>
+  <rect x="11.4" y="17" width="9.2" height="7.6" rx="1.6" fill="#ffffff" stroke="#0d1118" stroke-width="1"/>
+  <rect x="15.3" y="19.3" width="1.4" height="2.8" rx="0.7" fill="#0d1118"/>
+</svg>

@@ -1,0 +1,536 @@
+# French translation for Tunnelbird.
+# This file is distributed under the same license as the Tunnelbird package.
+msgid ""
+msgstr ""
+"Project-Id-Version: tunnelbird\n"
+"PO-Revision-Date: 2026-10-29 01:00+0100\n"
+"Last-Translator: Ferhat\n"
+"Language-Team: French\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "_About Tunnelbird"
+msgstr "À _propos de Tunnelbird"
+
+msgid "Active Connection"
+msgstr "Connexion en cours"
+
+msgid "A [Peer] section has no PublicKey"
+msgstr "Une section [Peer] n’a pas de PublicKey"
+
+msgid "_Cancel"
+msgstr "_Annuler"
+
+msgid "Cannot connect “{name}”"
+msgstr "Impossible de connecter « {name} »"
+
+msgid "Cannot delete “{name}”"
+msgstr "Impossible de supprimer « {name} »"
+
+msgid "Cannot disconnect “{name}”"
+msgstr "Impossible de déconnecter « {name} »"
+
+msgid "Cannot import “{file}”"
+msgstr "Impossible d’importer « {file} »"
+
+msgid "Cannot open the file chooser"
+msgstr "Impossible d’ouvrir le sélecteur de fichiers"
+
+msgid "Cannot read the tunnel list"
+msgstr "Impossible de lire la liste des tunnels"
+
+msgid "Connected"
+msgstr "Connecté"
+
+msgid "Connecting…"
+msgstr "Connexion…"
+
+msgid "Connect “{name}”"
+msgstr "Connecter « {name} »"
+
+msgid "Connect to your VPN tunnels in one click."
+msgstr "Connectez-vous à vos tunnels VPN en un clic."
+
+msgid "Could not connect to “{name}”. Check the server address and your keys."
+msgstr "Connexion à « {name} » impossible. Vérifiez l’adresse du serveur et vos clés."
+
+msgid "_Delete"
+msgstr "_Supprimer"
+
+msgid "Delete"
+msgstr "Supprimer"
+
+msgid "Delete “{name}”?"
+msgstr "Supprimer « {name} » ?"
+
+msgid "Disconnected"
+msgstr "Déconnecté"
+
+msgid "Disconnecting…"
+msgstr "Déconnexion…"
+
+msgid "Download"
+msgstr "Réception"
+
+msgid "ignored settings: {keys}"
+msgstr "réglages ignorés : {keys}"
+
+msgid "Import Configuration File"
+msgstr "Importer un fichier de configuration"
+
+msgid "_Import File…"
+msgstr "_Importer un fichier…"
+
+msgid "Import the .conf file provided by your VPN server, or drop it here."
+msgstr "Importez le fichier .conf fourni par votre serveur VPN, ou déposez-le ici."
+
+msgid "Import VPN Configuration"
+msgstr "Importer une configuration VPN"
+
+msgid "Invalid key for {key}"
+msgstr "Clé invalide pour {key}"
+
+msgid "Invalid value for {key}: “{value}”"
+msgstr "Valeur invalide pour {key} : « {value} »"
+
+msgid "Line is not of the form Key = Value"
+msgstr "La ligne n’est pas de la forme Clé = Valeur"
+
+msgid "line {number}"
+msgstr "ligne {number}"
+
+msgid "Main Menu"
+msgstr "Menu principal"
+
+msgid "“{name}” deleted"
+msgstr "« {name} » supprimé"
+
+msgid "“{name}” imported"
+msgstr "« {name} » importé"
+
+msgid "NetworkManager is not available"
+msgstr "NetworkManager n’est pas disponible"
+
+msgid "NetworkManager Unavailable"
+msgstr "NetworkManager indisponible"
+
+msgid "No Tunnels"
+msgstr "Aucun tunnel"
+
+msgid "_Retry"
+msgstr "_Réessayer"
+
+msgid "scale {rate}"
+msgstr "échelle {rate}"
+
+msgid "Setting found outside of a section"
+msgstr "Réglage placé hors d’une section"
+
+msgid "Since connected: {rx} received · {tx} sent"
+msgstr "Depuis la connexion : {rx} reçus · {tx} envoyés"
+
+msgid "{size}/s"
+msgstr "{size}/s"
+
+msgid "The file has no [Interface] section"
+msgstr "Le fichier n’a pas de section [Interface]"
+
+msgid "The file has no [Peer] section"
+msgstr "Le fichier n’a pas de section [Peer]"
+
+msgid "The [Interface] section has no PrivateKey"
+msgstr "La section [Interface] n’a pas de PrivateKey"
+
+msgid "The tunnel will be removed from this computer. You can import the file again later."
+msgstr "Le tunnel sera retiré de cet ordinateur. Vous pourrez réimporter le fichier plus tard."
+
+msgid "Traffic over the last minute"
+msgstr "Trafic de la dernière minute"
+
+msgid "translator-credits"
+msgstr "Ferhat"
+
+msgid "Tunnels"
+msgstr "Tunnels"
+
+msgid "Unknown section [{name}]"
+msgstr "Section inconnue [{name}]"
+
+msgid "Upload"
+msgstr "Envoi"
+
+msgid "Tunnelbird needs NetworkManager to manage VPN tunnels. Make sure it is installed and running."
+msgstr "Tunnelbird a besoin de NetworkManager pour gérer les tunnels VPN. Vérifiez qu’il est installé et démarré."
+
+msgid "VPN Configuration"
+msgstr "Configuration VPN"
+
+msgid "_Details"
+msgstr "_Détails"
+
+msgid "_Close"
+msgstr "_Fermer"
+
+msgid "Country flag"
+msgstr "Drapeau du pays"
+
+msgid "Check Location Again"
+msgstr "Vérifier à nouveau la position"
+
+msgid "Only traffic to the VPN network goes through this tunnel: your public IP address does not change."
+msgstr "Seul le trafic vers le réseau du VPN passe par ce tunnel : votre adresse IP publique ne change pas."
+
+msgid "Address in the VPN: {address}"
+msgstr "Adresse dans le VPN : {address}"
+
+msgid "Public IP: {ip}"
+msgstr "IP publique : {ip}"
+
+msgid "Unknown location"
+msgstr "Position inconnue"
+
+msgid "Location unavailable"
+msgstr "Position indisponible"
+
+msgid "Check your connection, then try again."
+msgstr "Vérifiez votre connexion, puis réessayez."
+
+msgid "Locating…"
+msgstr "Localisation…"
+
+msgid "“{old}” disconnected, connecting “{new}”"
+msgstr "« {old} » déconnecté, connexion à « {new} »"
+
+msgid "Author on GitHub"
+msgstr "L’auteur sur GitHub"
+
+msgid "_Preferences"
+msgstr "_Préférences"
+
+msgid "Appearance"
+msgstr "Apparence"
+
+msgid "Follow System"
+msgstr "Suivre le système"
+
+msgid "Light"
+msgstr "Clair"
+
+msgid "Dark"
+msgstr "Sombre"
+
+msgid "Theme"
+msgstr "Thème"
+
+msgid "Language"
+msgstr "Langue"
+
+msgid "Interface Language"
+msgstr "Langue de l’interface"
+
+msgid "Tunnelbird restarts to apply a new language"
+msgstr "Tunnelbird redémarre pour appliquer une nouvelle langue"
+
+msgid "Restart Tunnelbird to apply the new language"
+msgstr "Redémarrez Tunnelbird pour appliquer la nouvelle langue"
+
+msgid "_Restart"
+msgstr "_Redémarrer"
+
+msgid "Cannot save preferences"
+msgstr "Impossible d’enregistrer les préférences"
+
+msgid "Behavior"
+msgstr "Comportement"
+
+msgid "Run in Background"
+msgstr "Fonctionner en arrière-plan"
+
+msgid "Keep Tunnelbird in the top bar when the window is closed"
+msgstr "Garder Tunnelbird dans la barre du haut quand la fenêtre est fermée"
+
+msgid "Tunnelbird is still running"
+msgstr "Tunnelbird fonctionne toujours"
+
+msgid "Use its icon in the top bar to switch VPN, open the window or quit."
+msgstr "Utilisez son icône dans la barre du haut pour changer de VPN, ouvrir la fenêtre ou quitter."
+
+msgid "Connected to “{name}”"
+msgstr "Connecté à « {name} »"
+
+msgid "Not connected"
+msgstr "Non connecté"
+
+msgid "Open Tunnelbird"
+msgstr "Ouvrir Tunnelbird"
+
+msgid "Disconnect"
+msgstr "Déconnecter"
+
+msgid "Quit"
+msgstr "Quitter"
+
+msgid "Invalid server address “{value}”: expected host:port, for example vpn.example.com:51820"
+msgstr "Adresse de serveur invalide « {value} » : forme attendue hôte:port, par exemple vpn.example.com:51820"
+
+msgid "This is an OpenVPN profile. Tunnelbird does not support this protocol yet: ask your provider for a .conf tunnel file instead."
+msgstr "Ceci est un profil OpenVPN. Tunnelbird ne prend pas encore ce protocole en charge : demandez plutôt un fichier de tunnel .conf à votre fournisseur."
+
+msgid "This file uses obfuscation settings ({keys}) that the system cannot apply. Download a standard configuration from your provider."
+msgstr "Ce fichier utilise des réglages d’obfuscation ({keys}) que le système ne sait pas appliquer. Téléchargez une configuration standard chez votre fournisseur."
+
+msgid "This is a ZIP archive. Extract it first, then import the .conf files it contains."
+msgstr "Ceci est une archive ZIP. Extrayez-la d’abord, puis importez les fichiers .conf qu’elle contient."
+
+msgid "Import Tunnel"
+msgstr "Importer un tunnel"
+
+msgid "Edit Tunnel"
+msgstr "Modifier le tunnel"
+
+msgid "_Import"
+msgstr "_Importer"
+
+msgid "_Save"
+msgstr "_Enregistrer"
+
+msgid "Not supported, will be ignored: {keys}"
+msgstr "Non pris en charge, sera ignoré : {keys}"
+
+msgid "Name"
+msgstr "Nom"
+
+msgid "Server Address"
+msgstr "Adresse du serveur"
+
+msgid "Server Public Key"
+msgstr "Clé publique du serveur"
+
+msgid "Preshared Key (optional)"
+msgstr "Clé prépartagée (facultative)"
+
+msgid "Routed Networks"
+msgstr "Réseaux routés"
+
+msgid "Keepalive in Seconds (optional)"
+msgstr "Maintien de connexion en secondes (facultatif)"
+
+msgid "Addresses"
+msgstr "Adresses"
+
+msgid "DNS Servers"
+msgstr "Serveurs DNS"
+
+msgid "Private Key"
+msgstr "Clé privée"
+
+msgid "MTU (optional)"
+msgstr "MTU (facultatif)"
+
+msgid "Provider"
+msgstr "Fournisseur"
+
+msgid "Custom server"
+msgstr "Serveur personnel"
+
+msgid "Traffic"
+msgstr "Trafic"
+
+msgid "Server"
+msgstr "Serveur"
+
+msgid "This tunnel has {count} servers. Only the first one is shown; the others are kept as they are."
+msgstr "Ce tunnel a {count} serveurs. Seul le premier est affiché ; les autres sont conservés tels quels."
+
+msgid "This Computer"
+msgstr "Cet ordinateur"
+
+msgid "Addresses and keys of this computer inside the VPN"
+msgstr "Adresses et clés de cet ordinateur dans le VPN"
+
+msgid "All internet traffic goes through the VPN"
+msgstr "Tout le trafic internet passe par le VPN"
+
+msgid "Only the routed networks go through the VPN"
+msgstr "Seuls les réseaux routés passent par le VPN"
+
+msgid "Enter a name for this tunnel"
+msgstr "Saisissez un nom pour ce tunnel"
+
+msgid "Enter the server address, for example vpn.example.com:51820"
+msgstr "Saisissez l’adresse du serveur, par exemple vpn.example.com:51820"
+
+msgid "Edit"
+msgstr "Modifier"
+
+msgid "Cannot edit “{name}”"
+msgstr "Impossible de modifier « {name} »"
+
+msgid "“{name}” saved"
+msgstr "« {name} » enregistré"
+
+msgid "Saved. Reconnect to apply the changes."
+msgstr "Enregistré. Reconnectez-vous pour appliquer les changements."
+
+msgid "_Reconnect"
+msgstr "_Reconnecter"
+
+msgid "Type"
+msgstr "Type"
+
+msgid "“{name}”: server not responding"
+msgstr "« {name} » : le serveur ne répond pas"
+
+msgid "VPN disconnected"
+msgstr "VPN déconnecté"
+
+msgid "“{name}” stopped on its own. Your traffic no longer goes through the VPN."
+msgstr "« {name} » s’est arrêté tout seul. Votre trafic ne passe plus par le VPN."
+
+msgid "VPN server not responding"
+msgstr "Le serveur VPN ne répond pas"
+
+msgid "“{name}” is connected, but its server does not answer. Check your internet connection or try another server."
+msgstr "« {name} » est connecté, mais son serveur ne répond pas. Vérifiez votre connexion internet ou essayez un autre serveur."
+
+msgid "Server not responding"
+msgstr "Le serveur ne répond pas"
+
+msgid "Tunnel Configuration"
+msgstr "Configuration de tunnel"
+
+msgid "Export Tunnel"
+msgstr "Exporter le tunnel"
+
+msgid "This location cannot be written to"
+msgstr "Impossible d’écrire à cet emplacement"
+
+msgid "This code contains your private key: anyone who scans it can use this tunnel. Show it only to your own devices."
+msgstr "Ce code contient votre clé privée : quiconque le scanne peut utiliser ce tunnel. Montrez-le uniquement à vos propres appareils."
+
+msgid "This tunnel is too large for a QR code. Export it as a file instead."
+msgstr "Ce tunnel est trop volumineux pour un QR code. Exportez-le plutôt en fichier."
+
+msgid "On your phone, open your VPN app, add a tunnel and choose to scan a QR code."
+msgstr "Sur votre téléphone, ouvrez votre app VPN, ajoutez un tunnel et choisissez de scanner un QR code."
+
+msgid "Scan with Your Phone"
+msgstr "Scanner avec votre téléphone"
+
+msgid "QR code of “{name}”"
+msgstr "QR code de « {name} »"
+
+msgid "Share"
+msgstr "Partager"
+
+msgid "Both include the private key of this tunnel: keep them to yourself."
+msgstr "Les deux contiennent la clé privée de ce tunnel : gardez-les pour vous."
+
+msgid "Export as File…"
+msgstr "Exporter en fichier…"
+
+msgid "Show QR Code"
+msgstr "Afficher le QR code"
+
+msgid "Saved to {path}"
+msgstr "Enregistré dans {path}"
+
+msgid "Cannot share “{name}”"
+msgstr "Impossible de partager « {name} »"
+
+msgid "General"
+msgstr "Général"
+
+msgid "Start at Login"
+msgstr "Lancer à l’ouverture de session"
+
+msgid "Starts hidden in the top bar, ready to protect you"
+msgstr "Démarre caché dans la barre du haut, prêt à vous protéger"
+
+msgid "Cannot change start at login"
+msgstr "Impossible de modifier le lancement à l’ouverture de session"
+
+msgid "Automatic Connection"
+msgstr "Connexion automatique"
+
+msgid "Tunnelbird connects a tunnel by itself when you join a network you do not trust, such as café or hotel Wi-Fi. It never disconnects anything on its own."
+msgstr "Tunnelbird connecte un tunnel tout seul quand vous rejoignez un réseau qui n’est pas de confiance, comme le Wi-Fi d’un café ou d’un hôtel. Il ne déconnecte jamais rien de lui-même."
+
+msgid "Connect on Untrusted Networks"
+msgstr "Se connecter sur les réseaux non fiables"
+
+msgid "Tunnel to Connect"
+msgstr "Tunnel à connecter"
+
+msgid "Import a tunnel first"
+msgstr "Importez d’abord un tunnel"
+
+msgid "Trust Wired Networks"
+msgstr "Faire confiance aux réseaux filaires"
+
+msgid "A cable usually means home or office"
+msgstr "Un câble, c’est en général la maison ou le bureau"
+
+msgid "Trusted Wi-Fi Networks"
+msgstr "Wi-Fi de confiance"
+
+msgid "Trust “{name}”"
+msgstr "Faire confiance à « {name} »"
+
+msgid "The Wi-Fi network you are on now"
+msgstr "Le Wi-Fi sur lequel vous êtes"
+
+msgid "Stop Trusting"
+msgstr "Ne plus faire confiance"
+
+msgid "Start hidden in the top bar"
+msgstr "Démarrer caché dans la barre du haut"
+
+msgid "Wi-Fi “{name}”"
+msgstr "Le Wi-Fi « {name} »"
+
+msgid "This wired network"
+msgstr "Ce réseau filaire"
+
+msgid "This network"
+msgstr "Ce réseau"
+
+msgid "Connecting “{name}”"
+msgstr "Connexion de « {name} »"
+
+msgid "{network} is not one of your trusted networks."
+msgstr "{network} ne fait pas partie de vos réseaux de confiance."
+
+msgid "Add a Saved Wi-Fi Network"
+msgstr "Ajouter un Wi-Fi enregistré"
+
+msgid "Networks this computer has already joined"
+msgstr "Les réseaux auxquels cet ordinateur s’est déjà connecté"
+
+msgid "System Language ({language})"
+msgstr "Langue du système ({language})"
+
+msgid "Start Tunnelbird hidden in the top bar when you log in"
+msgstr "Lancer Tunnelbird caché dans la barre du haut à l’ouverture de session"
+
+msgid "Strict Verification"
+msgstr "Vérification stricte"
+
+msgid "Also check the hardware of the Wi-Fi router, so a hotspot with the same name is not trusted. Best for networks without repeaters."
+msgstr "Vérifie aussi le matériel de la box Wi-Fi, pour qu’un point d’accès du même nom ne soit pas pris pour elle. Idéal pour les réseaux sans répéteur."
+
+msgid "Trust This Access Point of “{name}”"
+msgstr "Faire confiance à cette borne de « {name} »"
+
+msgid "New router or repeater: trust it only if it is yours"
+msgstr "Nouvelle box ou répéteur : faites-lui confiance seulement s’il est à vous"
+
+msgid "Its access point will be remembered the next time you connect"
+msgstr "Sa borne sera retenue à votre prochaine connexion"
+
+msgid "Checked against {count} access point(s)"
+msgstr "Vérifié sur {count} borne(s)"
+

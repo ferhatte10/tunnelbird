@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Tunnelbird
+Comment=Connect to your VPN tunnels in one click
+Comment[fr]=Connectez-vous à vos tunnels VPN en un clic
+Exec=tunnelbird %F
+Icon=fr.ferhatsn.Tunnelbird
+Terminal=false
+Categories=Network;GTK;GNOME;
+Keywords=VPN;tunnel;network;conf;
+Keywords[fr]=VPN;tunnel;réseau;conf;
+StartupNotify=true
+DBusActivatable=false

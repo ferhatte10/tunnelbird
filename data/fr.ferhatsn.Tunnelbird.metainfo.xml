@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 Ferhat Saidoun -->
+<!-- Store listing for Flathub, GNOME Software and KDE Discover (AppStream). -->
+<component type="desktop-application">
+  <id>fr.ferhatsn.Tunnelbird</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>Tunnelbird</name>
+  <summary>Connect to your VPN tunnels in one click</summary>
+  <developer id="fr.ferhatsn">
+    <name>Ferhat Saidoun</name>
+  </developer>
+
+  <description>
+    <p>
+      Tunnelbird imports the .conf tunnel file from your VPN provider or your own
+      server, and connects in one click. It works with the network settings of
+      your system and never needs administrator rights.
+    </p>
+    <ul>
+      <li>Preview and edit a tunnel before saving it, with clear errors</li>
+      <li>One tunnel at a time: switching disconnects the previous one</li>
+      <li>Live traffic graph, public IP address, country and city</li>
+      <li>Warns when the server stops answering or the tunnel drops</li>
+      <li>Connects by itself on untrusted Wi-Fi, never on your own networks</li>
+      <li>Top bar icon to switch tunnels without opening the window</li>
+      <li>Share a tunnel as a file or as a QR code for your phone</li>
+      <li>Recognises well-known VPN providers</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">fr.ferhatsn.Tunnelbird.desktop</launchable>
+  <url type="homepage">https://ferhatsn.fr</url>
+
+  <content_rating type="oars-1.1"/>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#c9d3ea</color>
+    <color type="primary" scheme_preference="dark">#222a3b</color>
+  </branding>
+
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+
+  <categories>
+    <category>Network</category>
+  </categories>
+  <keywords>
+    <keyword>VPN</keyword>
+    <keyword>tunnel</keyword>
+    <keyword>network</keyword>
+    <keyword>privacy</keyword>
+  </keywords>
+
+  <releases>
+    <release version="0.1.0" date="2026-10-29">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

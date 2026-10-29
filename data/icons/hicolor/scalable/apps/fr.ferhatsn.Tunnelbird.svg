@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- Tunnelbird app icon. The red and blue triangle is the personal mark of Ferhat Saidoun (ferhatsn.fr). -->
+  <defs>
+    <linearGradient id="base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#222a3b"/>
+      <stop offset="1" stop-color="#0d1118"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="16" width="112" height="104" rx="26" fill="#05070b"/>
+  <rect x="8" y="8" width="112" height="104" rx="26" fill="url(#base)"/>
+  <rect x="9" y="9" width="110" height="102" rx="25" fill="none" stroke="#ffffff" stroke-opacity=".07" stroke-width="2"/>
+  <g transform="translate(14 20) scale(0.2)">
+    <path d="M239,10 L236,12 L17,377 L16,379 L17,382 L19,382 L21,381 L200,202 L217,180 L226,165 L237,140 L240,131 L240,128 L244,115 L244,111 L245,110 L245,105 L246,104 L246,97 L247,96 L247,13 L244,10 Z" fill="#e23439"/>
+    <path d="M239,265 L139,296 L126,301 L106,311 L96,317 L80,329 L70,338 L24,384 L23,389 L29,389 L243,300 L247,296 L247,268 L244,265 Z" fill="#e23439"/>
+    <path d="M256,10 L254,11 L252,14 L252,89 L253,90 L253,100 L254,101 L254,107 L255,108 L255,113 L257,118 L257,122 L264,144 L269,154 L269,156 L278,173 L295,197 L480,382 L482,382 L483,381 L482,376 L266,16 L264,13 L260,10 Z" fill="#296eb4"/>
+    <path d="M256,265 L254,266 L252,269 L252,295 L255,299 L471,389 L476,389 L477,386 L423,332 L409,321 L395,312 L376,302 L366,298 L261,265 Z" fill="#296eb4"/>
+  </g>
+  <path d="M57 64 V58 A7 7 0 0 1 71 58 V64" fill="none" stroke="#ffffff" stroke-width="4"/>
+  <rect x="53" y="63" width="22" height="16" rx="3" fill="#ffffff"/>
+  <g transform="translate(78 26) rotate(-20) scale(0.22)">
+    <path d="M98 28 Q91 20 81 22 C64 7 42 1 20 3 C38 12 52 22 58 31 L34 39 L3 35 L29 47 L9 62 L45 49 C55 51 61 59 63 70 C69 56 75 44 86 38 Q94 34 98 28 Z" fill="#ffffff"/>
+  </g>
+</svg>

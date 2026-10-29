@@ -1,0 +1,7 @@
+src/config.rs
+src/editor.rs
+src/main.rs
+src/preferences.rs
+src/window.rs
+src/share.rs
+src/portal.rs
