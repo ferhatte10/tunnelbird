@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 Ferhat Saidoun -->
+<!-- Store listing for Flathub, GNOME Software and KDE Discover (AppStream). -->
+<component type="desktop-application">
+  <id>fr.ferhatsn.Tunnelbird</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>Tunnelbird</name>
+  <summary>Connect to your VPN in one click</summary>
+  <summary xml:lang="fr">Connectez-vous à votre VPN en un clic</summary>
+  <developer id="fr.ferhatsn">
+    <name>Ferhat Saidoun</name>
+  </developer>
+
+  <description>
+    <p>
+      Tunnelbird imports the .conf or .ovpn file from your VPN provider or your
+      own server, and connects in one click. It works with the network settings of
+      your system and never needs administrator rights.
+    </p>
+    <ul>
+      <li>WireGuard® tunnels and OpenVPN profiles</li>
+      <li>Preview and edit a tunnel before saving it, with clear errors</li>
+      <li>One tunnel at a time: switching disconnects the previous one</li>
+      <li>Live traffic graph, public IP address, country and city</li>
+      <li>Warns when the server stops answering or the tunnel drops</li>
+      <li>Connects by itself on untrusted Wi-Fi, never on your own networks</li>
+      <li>Top bar icon to switch tunnels without opening the window</li>
+      <li>Share a tunnel as a file or as a QR code for your phone</li>
+      <li>Recognises well-known VPN providers</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">fr.ferhatsn.Tunnelbird.desktop</launchable>
+  <url type="homepage">https://ferhatsn.fr</url>
+  <url type="bugtracker">https://github.com/ferhatte10/tunnelbird/issues</url>
+  <url type="vcs-browser">https://github.com/ferhatte10/tunnelbird</url>
+  <url type="translate">https://github.com/ferhatte10/tunnelbird/blob/main/docs/TRANSLATING.md</url>
+
+  <!-- Taken by `make screenshots` (demo mode, made-up addresses). Served from
+       the tagged sources, so each release shows its own screens. -->
+  <screenshots>
+    <screenshot type="default">
+      <caption>Live traffic, public address and location of the connected tunnel</caption>
+      <caption xml:lang="fr">Trafic en direct, adresse publique et position du tunnel connecté</caption>
+      <image type="source" width="1412" height="1500">https://raw.githubusercontent.com/ferhatte10/tunnelbird/v0.1.0/data/screenshots/en/main.png</image>
+      <image type="source" width="1412" height="1500" xml:lang="fr">https://raw.githubusercontent.com/ferhatte10/tunnelbird/v0.1.0/data/screenshots/fr/main.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Preview and edit a tunnel file before importing it</caption>
+      <caption xml:lang="fr">Vérifiez et modifiez un fichier de tunnel avant de l’importer</caption>
+      <image type="source" width="1412" height="1500">https://raw.githubusercontent.com/ferhatte10/tunnelbird/v0.1.0/data/screenshots/en/import.png</image>
+      <image type="source" width="1412" height="1500" xml:lang="fr">https://raw.githubusercontent.com/ferhatte10/tunnelbird/v0.1.0/data/screenshots/fr/import.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Import OpenVPN profiles too, certificates included</caption>
+      <caption xml:lang="fr">Importez aussi des profils OpenVPN, certificats compris</caption>
+      <image type="source" width="1412" height="1500">https://raw.githubusercontent.com/ferhatte10/tunnelbird/v0.1.0/data/screenshots/en/import-openvpn.png</image>
+      <image type="source" width="1412" height="1500" xml:lang="fr">https://raw.githubusercontent.com/ferhatte10/tunnelbird/v0.1.0/data/screenshots/fr/import-openvpn.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Connect automatically on networks you do not trust</caption>
+      <caption xml:lang="fr">Connexion automatique sur les réseaux auxquels vous ne faites pas confiance</caption>
+      <image type="source" width="1412" height="1500">https://raw.githubusercontent.com/ferhatte10/tunnelbird/v0.1.0/data/screenshots/en/trusted-networks.png</image>
+      <image type="source" width="1412" height="1500" xml:lang="fr">https://raw.githubusercontent.com/ferhatte10/tunnelbird/v0.1.0/data/screenshots/fr/trusted-networks.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Share a tunnel with your phone as a QR code</caption>
+      <caption xml:lang="fr">Partagez un tunnel avec votre téléphone grâce à un QR code</caption>
+      <image type="source" width="1412" height="1500">https://raw.githubusercontent.com/ferhatte10/tunnelbird/v0.1.0/data/screenshots/en/qr-code.png</image>
+      <image type="source" width="1412" height="1500" xml:lang="fr">https://raw.githubusercontent.com/ferhatte10/tunnelbird/v0.1.0/data/screenshots/fr/qr-code.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>All your tunnels, one click to switch</caption>
+      <caption xml:lang="fr">Tous vos tunnels, un clic pour passer de l’un à l’autre</caption>
+      <image type="source" width="1412" height="1500">https://raw.githubusercontent.com/ferhatte10/tunnelbird/v0.1.0/data/screenshots/en/tunnels.png</image>
+      <image type="source" width="1412" height="1500" xml:lang="fr">https://raw.githubusercontent.com/ferhatte10/tunnelbird/v0.1.0/data/screenshots/fr/tunnels.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Follows the dark style of your desktop</caption>
+      <caption xml:lang="fr">Suit le style sombre de votre bureau</caption>
+      <image type="source" width="1412" height="1500">https://raw.githubusercontent.com/ferhatte10/tunnelbird/v0.1.0/data/screenshots/en/main-dark.png</image>
+      <image type="source" width="1412" height="1500" xml:lang="fr">https://raw.githubusercontent.com/ferhatte10/tunnelbird/v0.1.0/data/screenshots/fr/main-dark.png</image>
+    </screenshot>
+  </screenshots>
+
+  <content_rating type="oars-1.1"/>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#c9d3ea</color>
+    <color type="primary" scheme_preference="dark">#222a3b</color>
+  </branding>
+
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+
+  <categories>
+    <category>Network</category>
+  </categories>
+  <keywords>
+    <keyword>VPN</keyword>
+    <keyword>tunnel</keyword>
+    <keyword>network</keyword>
+    <keyword>privacy</keyword>
+    <keyword>OpenVPN</keyword>
+  </keywords>
+
+  <releases>
+    <release version="0.1.0" date="2026-10-29">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

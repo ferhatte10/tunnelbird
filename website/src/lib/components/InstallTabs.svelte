@@ -1,0 +1,50 @@
+<script lang="ts">
+	import { Tabs } from 'bits-ui';
+	import { m } from '#lib/paraglide/messages.js';
+	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { COMMANDS, GITHUB, INSTALL_SCRIPT_SOURCE, type Method } from '#lib/links.js';
+	import CommandBox from './CommandBox.svelte';
+
+	const methods: { id: Method; label: () => string; text: () => string }[] = [
+		{ id: 'apt', label: m.tab_apt, text: m.tab_apt_text },
+		{ id: 'dnf', label: m.tab_dnf, text: m.tab_dnf_text },
+		{ id: 'flatpak', label: m.tab_flatpak, text: m.tab_flatpak_text },
+		{ id: 'snap', label: m.tab_snap, text: m.tab_snap_text },
+		{ id: 'windows', label: m.tab_windows, text: m.tab_windows_text },
+		{ id: 'macos', label: m.tab_macos, text: m.tab_macos_text },
+		{ id: 'source', label: m.tab_source, text: m.tab_source_text }
+	];
+
+	let selected = $state<string>('apt');
+</script>
+
+<Tabs.Root bind:value={selected} class="flex flex-col gap-5">
+	<Tabs.List aria-label={m.install_systems()} class="flex flex-wrap gap-2">
+		{#each methods as method (method.id)}
+			<Tabs.Trigger
+				value={method.id}
+				class="min-h-11 rounded-full bg-surface px-[1.1rem] text-[0.9rem] font-bold text-text transition-colors hover:text-link data-[state=active]:bg-tab-on-bg data-[state=active]:text-tab-on-fg"
+			>
+				{method.label()}
+			</Tabs.Trigger>
+		{/each}
+	</Tabs.List>
+	{#each methods as method (method.id)}
+		{@const command = COMMANDS[method.id]}
+		<Tabs.Content value={method.id} class="flex flex-col gap-4">
+			{#if command}
+				<p class="m-0 text-text-2">{method.text()}</p>
+				<CommandBox {command} />
+			{:else}
+				<p class="m-0 font-display text-xl font-semibold">{m.tab_soon_title()}</p>
+				<p class="m-0 text-text-2">{method.text()}</p>
+				<p class="m-0"><a href={GITHUB}>{m.tab_soon_follow()}</a></p>
+			{/if}
+		</Tabs.Content>
+	{/each}
+	<p class="m-0 text-[0.85rem] text-text-3">
+		<a href={INSTALL_SCRIPT_SOURCE}>{m.install_links_script()}</a> ·
+		<a href={localizeHref('/install/') + '#steps'}>{m.install_links_steps()}</a> ·
+		<a href={localizeHref('/compatibility/')}>{m.install_links_compat()}</a>
+	</p>
+</Tabs.Root>

@@ -1,0 +1,175 @@
+name: Release
+
+# A tag vX.Y.Z publishes a release with no manual step: .deb and .rpm for amd64 and arm64, a Flatpak
+# bundle for testers, SHA256SUMS, latest.json for the website, and a build provenance for each file
+# (signed through GitHub's OIDC, no stored key: `gh attestation verify <file> -R ferhatte10/tunnelbird`).
+# No secret here: the APT/DNF repositories are signed in the cluster (docs/plans/website.md).
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  # The tag, Cargo.toml, the .spec and the store listing must announce the same version.
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - id: version
+        run: |
+          tag=${GITHUB_REF_NAME#v}
+          cargo=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)
+          spec=$(sed -n 's/^Version: *//p' build-aux/packaging/tunnelbird.spec)
+          listing=$(grep -o '<release version="[^"]*"' data/fr.ferhatsn.Tunnelbird.metainfo.xml | head -n1 | cut -d'"' -f2)
+          echo "tag $tag, Cargo.toml $cargo, .spec $spec, metainfo $listing"
+          [ "$tag" = "$cargo" ] && [ "$tag" = "$spec" ] && [ "$tag" = "$listing" ] || {
+            echo "::error::the tag, Cargo.toml, tunnelbird.spec and the metainfo's newest <release> must match"
+            exit 1
+          }
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+
+  # Built on the oldest supported Ubuntu: the package then installs on newer Ubuntu and on Debian 13.
+  deb:
+    needs: version
+    strategy:
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install the build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-4-dev libadwaita-1-dev libsoup-3.0-dev gettext dpkg-dev
+
+      - name: Rust (stable)
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: make deb
+        run: make deb
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: deb-${{ runner.arch }}
+          path: target/packages/*.deb
+          if-no-files-found: error
+
+  # Built inside Fedora, so it links against Fedora's own libraries (%check validates the desktop file
+  # and the store listing).
+  rpm:
+    needs: version
+    strategy:
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: fedora:42@sha256:99e203b80b1c3d8f7e161ec10a68fd02b081ef83a3963553e513c82846b97814
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install the build dependencies
+        run: |
+          dnf install -y rpm-build dnf5-plugins
+          dnf builddep -y build-aux/packaging/tunnelbird.spec
+
+      - name: make rpm
+        run: make rpm
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rpm-${{ runner.arch }}
+          path: target/packages/*/*.rpm
+          if-no-files-found: error
+
+  # Offline bundle for testers; the store version comes from Flathub (build-aux/flathub/).
+  flatpak:
+    needs: version
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50@sha256:1de59efef01a946d9f28f1ec3458bf6f61dcee3507d7fecdd473f8134da4ec77
+      options: --privileged
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3 # v6.8
+        with:
+          manifest-path: build-aux/flatpak/fr.ferhatsn.Tunnelbird.json
+          bundle: tunnelbird-${{ needs.version.outputs.version }}.flatpak
+          cache: false
+
+  publish:
+    needs: [version, deb, rpm, flatpak]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: dist
+          merge-multiple: true
+
+      # The notes and the date come from the store listing's newest <release>.
+      - name: Release notes and latest.json
+        run: |
+          python3 - <<'EOF'
+          import json, os, re, xml.etree.ElementTree as ET
+          release = ET.parse("data/fr.ferhatsn.Tunnelbird.metainfo.xml").find("releases/release")
+          lines = []
+          for node in release.find("description"):
+              text = re.sub(r"\s+", " ", "".join(node.itertext())).strip()
+              if node.tag == "p":
+                  lines += [text, ""]
+              else:
+                  lines += [f"- {re.sub(r'\s+', ' ', ''.join(li.itertext())).strip()}" for li in node] + [""]
+          open("notes.md", "w").write("\n".join(lines))
+          latest = {"version": os.environ["VERSION"], "date": release.get("date"),
+                    "url": "https://tunnelbird.ferhatsn.fr/install/"}
+          open("dist/latest.json", "w").write(json.dumps(latest, indent=2) + "\n")
+          EOF
+          cat notes.md dist/latest.json
+          ls -l dist
+
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum -- * > SHA256SUMS && cat SHA256SUMS
+
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*
+
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "Tunnelbird $VERSION" --notes-file notes.md --verify-tag
