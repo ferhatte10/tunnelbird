@@ -1,7 +1,9 @@
 # Plan: the website, `tunnelbird.ferhatsn.fr`
 
-Status: **plan**, to validate before any code. Items marked **Decision** wait
-for the owner.
+Status: **site written** (`website/`, 2026-10-30) in the validated A+B
+direction (see `website/DESIGN.md`); not deployed yet. Still open below:
+the package-signing CronJob, the deployment on the cluster, analytics (none
+so far).
 
 ## What the site is for
 

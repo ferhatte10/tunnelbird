@@ -1,0 +1,185 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/bricolage-grotesque';
+@import '@fontsource/atkinson-hyperlegible/400.css';
+@import '@fontsource/atkinson-hyperlegible/700.css';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/*
+ * Colour tokens (see DESIGN.md). Day is GNOME-like and clear; night takes the
+ * app icon's sky. The icon's blue is the action colour, its red only marks
+ * (current page, section triangle). Contrast pairs are checked by
+ * scripts/contrast.js (npm run check).
+ */
+:root {
+	--bg: #fafafa;
+	--bg-alt: #ffffff;
+	--surface: #e7e9ee;
+	--text: #1c1f26;
+	--text-2: #3d434f;
+	--text-3: #5c6370;
+	--code-bg: #1c1f26;
+	--code-text: #f2f3f6;
+	--link: #1f5fa0;
+	--link-hover: #123e6b;
+	--accent: #296eb4;
+	--accent-hover: #1f5fa0;
+	--on-accent: #ffffff;
+	--mark-red: #e23439;
+	--mark-blue: #296eb4;
+	--border: #e3e4e8;
+	--tab-on-bg: #1c1f26;
+	--tab-on-fg: #ffffff;
+	--icon: #296eb4;
+	--swallow: #1c1f26;
+	--flight: #5c6370;
+	color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+	--bg: #141a26;
+	--bg-alt: #1b2232;
+	--surface: #2a3347;
+	--text: #eef1f7;
+	--text-2: #c9d0dd;
+	--text-3: #aab3c5;
+	--code-bg: #0c111a;
+	--code-text: #eef1f7;
+	--link: #8fb9ff;
+	--link-hover: #c4dbff;
+	--accent: #296eb4;
+	--accent-hover: #1f5fa0;
+	--on-accent: #ffffff;
+	--border: #2c3548;
+	--tab-on-bg: #eef1f7;
+	--tab-on-fg: #141a26;
+	--icon: #8fb9ff;
+	--swallow: #eef1f7;
+	--flight: #aab3c5;
+	color-scheme: dark;
+}
+
+@theme inline {
+	--color-bg: var(--bg);
+	--color-bg-alt: var(--bg-alt);
+	--color-surface: var(--surface);
+	--color-text: var(--text);
+	--color-text-2: var(--text-2);
+	--color-text-3: var(--text-3);
+	--color-code-bg: var(--code-bg);
+	--color-code-text: var(--code-text);
+	--color-link: var(--link);
+	--color-link-hover: var(--link-hover);
+	--color-accent: var(--accent);
+	--color-accent-hover: var(--accent-hover);
+	--color-on-accent: var(--on-accent);
+	--color-mark-red: var(--mark-red);
+	--color-border: var(--border);
+	--color-tab-on-bg: var(--tab-on-bg);
+	--color-tab-on-fg: var(--tab-on-fg);
+	--color-icon: var(--icon);
+	--font-display: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+	--font-sans: 'Atkinson Hyperlegible', system-ui, sans-serif;
+	--font-mono: ui-monospace, 'DejaVu Sans Mono', 'Cascadia Mono', monospace;
+}
+
+@layer base {
+	html {
+		background: var(--bg);
+		color: var(--text);
+		font-family: var(--font-sans);
+		font-size: 112.5%; /* 18 px body text */
+		line-height: 1.6;
+		-webkit-text-size-adjust: 100%;
+	}
+	body {
+		margin: 0;
+		min-height: 100dvh;
+		display: flex;
+		flex-direction: column;
+	}
+	/* Everything that can be clicked shows it (Tailwind 4 removed it on buttons). */
+	a,
+	button,
+	[role='tab'],
+	label[for],
+	summary {
+		cursor: pointer;
+	}
+	a {
+		color: var(--link);
+		text-decoration-thickness: 1px;
+		text-underline-offset: 3px;
+	}
+	a:hover {
+		color: var(--link-hover);
+	}
+	:focus-visible {
+		outline: 3px solid var(--accent);
+		outline-offset: 2px;
+		border-radius: 6px;
+	}
+	h1,
+	h2,
+	h3 {
+		font-family: var(--font-display);
+		text-wrap: balance;
+	}
+	p {
+		text-wrap: pretty;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		*,
+		*::before,
+		*::after {
+			transition-duration: 0.01ms !important;
+			animation-duration: 0.01ms !important;
+		}
+	}
+}
+
+@layer components {
+	.container-site {
+		width: 100%;
+		max-width: 75rem;
+		margin-inline: auto;
+		padding-inline: 1.25rem;
+	}
+	@media (min-width: 48rem) {
+		.container-site {
+			padding-inline: 2rem;
+		}
+	}
+	.prose-site h2 {
+		font-size: 1.75rem;
+		font-weight: 800;
+		line-height: 1.15;
+		margin: 2.5rem 0 0.75rem;
+	}
+	.prose-site h3 {
+		font-size: 1.25rem;
+		font-weight: 600;
+		margin: 1.75rem 0 0.5rem;
+	}
+	.prose-site p,
+	.prose-site ul,
+	.prose-site ol {
+		margin: 0 0 1rem;
+		color: var(--text-2);
+	}
+	.prose-site ul,
+	.prose-site ol {
+		padding-left: 1.25rem;
+	}
+	.prose-site li {
+		margin: 0.25rem 0;
+	}
+	.prose-site code {
+		font-family: var(--font-mono);
+		font-size: 0.9em;
+		background: var(--surface);
+		border-radius: 6px;
+		padding: 0.1em 0.35em;
+		overflow-wrap: anywhere;
+	}
+}

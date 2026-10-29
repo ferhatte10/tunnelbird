@@ -18,6 +18,9 @@ NetworkManager over D-Bus and never runs as root. It does not manage servers.
 
 ## Map
 
+- `website/` — the project's site (SvelteKit, static), see `website/README.md`
+  and `website/DESIGN.md`.
+
 - `crates/core/` — `tunnelbird-core`, logic shared with future Windows/macOS
   apps: no GTK, no D-Bus, no file system, everything unit-tested.
   - `config.rs` — lenient `.conf` parser; `ovpn.rs` — `.ovpn` parser/writer;
