@@ -40,6 +40,7 @@ stores no secret itself.
 | `src/share.rs` | Export as `.conf` (mode 0600) and QR code (`qrcode` crate, drawn with Cairo) | `config` |
 | `crates/core/src/trust.rs` | Trusted networks rule: when joining which network connects which tunnel. Unit-tested | — |
 | `src/traffic.rs` | Reads interface byte counters, draws the live graph with Cairo | — |
+| `crates/core/src/protocol.rs` | Messages between a native interface and the tunnel service on Windows and macOS (see [PROTOCOL.md](PROTOCOL.md)). Unit-tested | `profile` |
 | `crates/core/src/version.rs` | Version comparison, daily check timing, release notes from the metainfo. Unit-tested | — |
 | `src/update.rs` | How the app was installed, new version checks (`latest.json`, Flatpak portal), restart after an update. Unit-tested | `geo`, `portal`, `version` |
 | `src/demo.rs` | Demo mode (`TUNNELBIRD_DEMO`): made-up tunnels and traffic for store screenshots, isolated settings | `config`, `settings` |

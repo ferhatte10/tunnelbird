@@ -8,7 +8,8 @@
 use crate::config::{self, WgConfig};
 use crate::ovpn::{self, OvpnConfig};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Kind {
     #[default]
     WireGuard,

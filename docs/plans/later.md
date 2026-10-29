@@ -96,6 +96,10 @@ unit-tested. The Linux app becomes one client of that core.
 
 ### Step 2: Windows (first: larger audience, simpler than macOS)
 
+Started: the interface ↔ service protocol is defined and tested
+(`crates/core/src/protocol.rs`, described in `docs/PROTOCOL.md`); the same one
+serves macOS.
+
 - **Tunnels**: WireGuardNT (kernel driver, `wireguard.dll`, signed by its
   authors) for WireGuard, and OpenVPN's `ovpn-dco-win` driver for OpenVPN.
   Creating adapters needs administrator rights, so the design is the classic

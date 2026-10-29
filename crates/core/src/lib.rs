@@ -12,7 +12,9 @@
 //! - [`provider`] recognises well-known VPN providers;
 //! - [`trust`]    decides when to connect automatically (trusted networks);
 //! - [`health`]   tells a working tunnel from one whose server stays silent;
-//! - [`version`]  compares versions and reads release notes.
+//! - [`version`]  compares versions and reads release notes;
+//! - [`protocol`] messages between a native interface and the tunnel service
+//!   (Windows, macOS).
 //!
 //! User-visible messages go through gettext, in the app's text domain.
 
@@ -20,6 +22,7 @@ pub mod config;
 pub mod health;
 pub mod ovpn;
 pub mod profile;
+pub mod protocol;
 pub mod provider;
 pub mod trust;
 pub mod version;

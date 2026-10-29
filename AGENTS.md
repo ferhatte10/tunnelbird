@@ -19,6 +19,8 @@ NetworkManager over D-Bus and never runs as root. It does not manage servers.
   - `provider.rs` — provider detection table; add providers there, with a test.
   - `trust.rs`, `health.rs`, `version.rs` — trusted networks, server health,
     versions.
+  - `protocol.rs` — interface ↔ tunnel service messages for Windows/macOS
+    (`docs/PROTOCOL.md`); renaming a field is a breaking change.
 - `src/openvpn.rs` — NetworkManager's OpenVPN settings and certificate files.
 - `src/nm.rs` — D-Bus proxies and `WgConfig` → NetworkManager settings.
 - `src/geo.rs` — public IP/location lookup (libsoup + serde), flags, country names.

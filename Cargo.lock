@@ -1135,6 +1135,8 @@ version = "0.1.0"
 dependencies = [
  "base64",
  "gettext-rs",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
