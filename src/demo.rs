@@ -134,6 +134,7 @@ pub fn tunnels() -> Vec<Tunnel> {
                     .map(str::to_owned)
                     .collect(),
                 full_tunnel: *full,
+                carries_ipv6: *full,
                 provider: None,
                 state: if connected {
                     TunnelState::Connected
