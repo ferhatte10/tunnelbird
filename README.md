@@ -56,6 +56,9 @@ leaves your computer. Partial tunnels are not looked up.
 
 ## Requirements
 
+Full matrix (processors, distributions, desktops, tunnel files, what was
+tested on which machine): [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
+
 - Linux 5.6 or later
 - NetworkManager 1.16 or later (installed by default on Ubuntu, Fedora, Debian desktop, Mint, Manjaro…)
 - GTK 4.14, libadwaita 1.5 and libsoup 3 or later

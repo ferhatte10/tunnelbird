@@ -98,7 +98,11 @@ unit-tested. The Linux app becomes one client of that core.
 
 Started: the interface ↔ service protocol is defined and tested
 (`crates/core/src/protocol.rs`, described in `docs/PROTOCOL.md`); the same one
-serves macOS.
+serves macOS. The service exists (`crates/service`): request handling, one
+tunnel at a time, storage and Unix socket, tested with a fake backend, and it
+compiles for Windows and macOS. Next, on the Windows PC: the WireGuardNT and
+ovpn-dco-win backend, the named pipe, DPAPI storage, then the WinUI 3
+interface.
 
 - **Tunnels**: WireGuardNT (kernel driver, `wireguard.dll`, signed by its
   authors) for WireGuard, and OpenVPN's `ovpn-dco-win` driver for OpenVPN.

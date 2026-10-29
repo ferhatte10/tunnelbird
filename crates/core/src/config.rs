@@ -20,9 +20,9 @@
 use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
+use crate::i18n::gettext;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
-use gettextrs::gettext;
 
 /// Tunnel type shown to the user, like a provider name: it says what kind of
 /// file was imported, never names the app. Plain text only (see docs/TRADEMARK.md).

@@ -1140,6 +1140,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tunnelbird-service"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tunnelbird-core",
+ "uuid",
+]
+
+[[package]]
 name = "uds_windows"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

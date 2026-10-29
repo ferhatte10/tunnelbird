@@ -10,6 +10,12 @@ NetworkManager over D-Bus and never runs as root. It does not manage servers.
 3. `docs/TRADEMARK.md` — own identity: no third-party VPN name or logo in the UI,
    texts, names or icons (technical identifiers in code are fine).
 
+## Keep up to date
+
+- `docs/COMPATIBILITY.md` when a requirement changes or something gets tested
+  (the website copies it; only write “Tested” for what was really run).
+- `docs/PROTOCOL.md` with `crates/core/src/protocol.rs`.
+
 ## Map
 
 - `crates/core/` — `tunnelbird-core`, logic shared with future Windows/macOS
@@ -22,6 +28,9 @@ NetworkManager over D-Bus and never runs as root. It does not manage servers.
   - `protocol.rs` — interface ↔ tunnel service messages for Windows/macOS
     (`docs/PROTOCOL.md`); renaming a field is a breaking change.
 - `src/openvpn.rs` — NetworkManager's OpenVPN settings and certificate files.
+- `crates/service/` — tunnel service for Windows/macOS: request handling,
+  storage and Unix socket done and tested with a fake backend (`--fake`);
+  driver backends, named pipe and DPAPI storage still to write.
 - `src/nm.rs` — D-Bus proxies and `WgConfig` → NetworkManager settings.
 - `src/geo.rs` — public IP/location lookup (libsoup + serde), flags, country names.
 - `src/traffic.rs` — `/sys` counters and the Cairo graph.

@@ -14,7 +14,7 @@
 use std::fmt;
 use std::path::Path;
 
-use gettextrs::gettext;
+use crate::i18n::gettext;
 
 /// Tunnel type shown to the user.
 pub const TUNNEL_TYPE: &str = "OpenVPN";

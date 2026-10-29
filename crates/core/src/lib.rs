@@ -16,10 +16,12 @@
 //! - [`protocol`] messages between a native interface and the tunnel service
 //!   (Windows, macOS).
 //!
-//! User-visible messages go through gettext, in the app's text domain.
+//! User-visible messages go through gettext, in the app's text domain (see
+//! [`i18n`]: optional, for systems without gettext).
 
 pub mod config;
 pub mod health;
+pub mod i18n;
 pub mod ovpn;
 pub mod profile;
 pub mod protocol;

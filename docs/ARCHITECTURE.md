@@ -1,12 +1,15 @@
 # Architecture
 
-Tunnelbird is a Cargo workspace with two crates. It holds no privilege and
+Tunnelbird is a Cargo workspace with three crates. It holds no privilege and
 stores no secret itself.
 
 - `crates/core` (`tunnelbird-core`): the logic every system shares, pure and
   unit-tested: the `.conf` and `.ovpn` parsers, providers, trusted networks,
   server health, versions. No GTK, no D-Bus, no file system: the Windows and
   macOS apps planned in `docs/plans/later.md` will use it as it is.
+- `crates/service` (`tunnelbird-service`): the tunnel service of the future
+  Windows and macOS apps ([PROTOCOL.md](PROTOCOL.md)); its logic is tested
+  on Linux with a fake backend, the system drivers are still to write.
 - the root crate (`tunnelbird`): the Linux app, GTK/libadwaita and
   NetworkManager. `main.rs` imports the core modules at the crate root, so
   `crate::config` and the like read the same in both crates.
