@@ -12,6 +12,7 @@
 //! - [`provider`] recognises well-known VPN providers;
 //! - [`trust`]    decides when to connect automatically (trusted networks);
 //! - [`health`]   tells a working tunnel from one whose server stays silent;
+//! - [`plan`]     a WireGuard® tunnel as Windows and macOS apply it;
 //! - [`version`]  compares versions and reads release notes;
 //! - [`protocol`] messages between a native interface and the tunnel service
 //!   (Windows, macOS).
@@ -23,6 +24,7 @@ pub mod config;
 pub mod health;
 pub mod i18n;
 pub mod ovpn;
+pub mod plan;
 pub mod profile;
 pub mod protocol;
 pub mod provider;

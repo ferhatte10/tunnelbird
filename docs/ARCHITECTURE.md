@@ -9,7 +9,8 @@ stores no secret itself.
   macOS apps planned in `docs/plans/later.md` will use it as it is.
 - `crates/service` (`tunnelbird-service`): the tunnel service of the future
   Windows and macOS apps ([PROTOCOL.md](PROTOCOL.md)); its logic is tested
-  on Linux with a fake backend, the system drivers are still to write.
+  on Linux with a fake backend; the Windows and macOS backends are written
+  but not yet run there ([WINDOWS.md](WINDOWS.md), [MACOS.md](MACOS.md)).
 - the root crate (`tunnelbird`): the Linux app, GTK/libadwaita and
   NetworkManager. `main.rs` imports the core modules at the crate root, so
   `crate::config` and the like read the same in both crates.

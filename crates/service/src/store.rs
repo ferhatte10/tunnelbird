@@ -5,9 +5,9 @@
 //! read (`/Library/Application Support/Tunnelbird` on macOS, folder 0700,
 //! files 0600).
 //!
-//! Windows will encrypt each file with DPAPI under `%ProgramData%\Tunnelbird`
-//! (see docs/PROTOCOL.md); until that is written, the service refuses to
-//! store anything there rather than keep keys in clear text.
+//! On Windows the folder is `%ProgramData%\Tunnelbird\tunnels`, open to SYSTEM
+//! and administrators only, and each file is encrypted with DPAPI for the
+//! machine (see `windows/dpapi.rs`).
 
 use std::path::PathBuf;
 
@@ -45,6 +45,7 @@ impl Store for FileStore {
             }
             // A damaged file is reported and skipped: the others stay usable.
             match std::fs::read(&path)
+                .and_then(|bytes| open_sealed(&bytes))
                 .map_err(|err| err.to_string())
                 .and_then(|bytes| {
                     serde_json::from_slice::<Stored>(&bytes).map_err(|err| err.to_string())
@@ -60,7 +61,9 @@ impl Store for FileStore {
     fn save(&mut self, tunnel: &Stored) -> Result<(), String> {
         let path = self.path(&tunnel.id)?;
         let json = serde_json::to_vec_pretty(tunnel).map_err(|err| err.to_string())?;
-        write_private(&path, &json).map_err(|err| format!("{}: {err}", path.display()))
+        seal(&json)
+            .and_then(|sealed| write_private(&path, &sealed))
+            .map_err(|err| format!("{}: {err}", path.display()))
     }
 
     fn delete(&mut self, id: &str) -> Result<(), String> {
@@ -101,20 +104,27 @@ fn write_private(path: &std::path::Path, bytes: &[u8]) -> std::io::Result<()> {
     std::fs::rename(partial, path)
 }
 
-#[cfg(not(unix))]
-fn create_private_dir(_: &std::path::Path) -> std::io::Result<()> {
-    Err(std::io::Error::new(
-        std::io::ErrorKind::Unsupported,
-        "encrypted storage (DPAPI) is not written yet",
-    ))
+/// File permissions protect the files on Unix: stored as is.
+#[cfg(unix)]
+fn seal(bytes: &[u8]) -> std::io::Result<Vec<u8>> {
+    Ok(bytes.to_vec())
 }
 
-#[cfg(not(unix))]
-fn write_private(_: &std::path::Path, _: &[u8]) -> std::io::Result<()> {
-    Err(std::io::Error::new(
-        std::io::ErrorKind::Unsupported,
-        "encrypted storage (DPAPI) is not written yet",
-    ))
+#[cfg(unix)]
+fn open_sealed(bytes: &[u8]) -> std::io::Result<Vec<u8>> {
+    Ok(bytes.to_vec())
+}
+
+#[cfg(windows)]
+use crate::windows::dpapi::{create_private_dir, protect as seal, unprotect as open_sealed};
+
+#[cfg(windows)]
+fn write_private(path: &std::path::Path, bytes: &[u8]) -> std::io::Result<()> {
+    // Written next to the target, then renamed: a crash never leaves half a
+    // file. The folder's permissions are inherited.
+    let partial = path.with_extension("json.partial");
+    std::fs::write(&partial, bytes)?;
+    std::fs::rename(partial, path)
 }
 
 #[cfg(all(test, unix))]

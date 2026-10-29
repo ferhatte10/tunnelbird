@@ -29,8 +29,11 @@ NetworkManager over D-Bus and never runs as root. It does not manage servers.
     (`docs/PROTOCOL.md`); renaming a field is a breaking change.
 - `src/openvpn.rs` — NetworkManager's OpenVPN settings and certificate files.
 - `crates/service/` — tunnel service for Windows/macOS: request handling,
-  storage and Unix socket done and tested with a fake backend (`--fake`);
-  driver backends, named pipe and DPAPI storage still to write.
+  storage and Unix socket tested with a fake backend (`--fake`); `windows/`
+  and `macos/` backends written but never run on those systems
+  (`docs/WINDOWS.md`, `docs/MACOS.md`: first-run steps and AI prompts).
+- `crates/core/src/plan.rs` — a WireGuard® tunnel as Windows/macOS apply it
+  (keys, routes with the server bypass, DNS, UAPI text).
 - `src/nm.rs` — D-Bus proxies and `WgConfig` → NetworkManager settings.
 - `src/geo.rs` — public IP/location lookup (libsoup + serde), flags, country names.
 - `src/traffic.rs` — `/sys` counters and the Cairo graph.

@@ -29,7 +29,7 @@ use base64::engine::general_purpose::STANDARD as BASE64;
 pub const TUNNEL_TYPE: &str = "WireGuard®";
 
 /// An IP network such as `10.0.0.2/32`.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IpNet {
     pub addr: IpAddr,
     pub prefix: u8,

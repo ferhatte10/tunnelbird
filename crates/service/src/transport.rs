@@ -2,8 +2,8 @@
 // Copyright 2026 Ferhat Saidoun
 
 //! The local channel to the interfaces: one JSON message per line (see
-//! docs/PROTOCOL.md). A Unix socket on macOS (and Linux, for development with
-//! the fake backend); the Windows named pipe comes with the Windows backend.
+//! docs/PROTOCOL.md): a Unix socket on macOS (and Linux, for development with
+//! the fake backend), the named pipe on Windows (`windows/pipe.rs`).
 //!
 //! Each client gets a thread. Requests go through one shared [`Service`]
 //! (one at a time); events are sent to every client that said `hello`.
@@ -114,8 +114,49 @@ impl TryClone for std::os::unix::net::UnixStream {
     }
 }
 
+/// Serves clients as they come, until the process ends. Requests go
+/// through one shared [`Service`]; a thread sends the traffic every second.
+pub fn serve<C, B, S>(
+    incoming: impl Iterator<Item = std::io::Result<C>>,
+    service: Service<B, S>,
+) -> std::io::Result<()>
+where
+    C: std::io::Read + Write + TryClone + Send + 'static,
+    B: Backend + Send + 'static,
+    S: Store + Send + 'static,
+{
+    let service = Arc::new(Mutex::new(service));
+    let clients: Clients<C> = Arc::new(Mutex::new(Vec::new()));
+
+    // Traffic of the connected tunnel, once a second.
+    {
+        let (service, clients) = (service.clone(), clients.clone());
+        std::thread::spawn(move || {
+            loop {
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                let events = lock(&service).tick();
+                broadcast(&clients, events);
+            }
+        });
+    }
+
+    for (number, stream) in (1u64..).zip(incoming) {
+        let stream = match stream {
+            Ok(stream) => stream,
+            Err(err) => {
+                eprintln!("Connection refused: {err}");
+                continue;
+            }
+        };
+        let reader = stream.try_clone_writer()?;
+        let (service, clients) = (service.clone(), clients.clone());
+        std::thread::spawn(move || serve_client(number, reader, stream, &service, &clients));
+    }
+    Ok(())
+}
+
 /// Listens on a Unix socket readable by its owner and group only (root and
-/// `admin` on macOS), and serves until the process ends.
+/// `admin` on macOS).
 #[cfg(unix)]
 pub fn serve_unix<B, S>(path: &std::path::Path, service: Service<B, S>) -> std::io::Result<()>
 where
@@ -131,33 +172,5 @@ where
     }
     let listener = UnixListener::bind(path)?;
     std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o660))?;
-
-    let service = Arc::new(Mutex::new(service));
-    let clients: Clients<std::os::unix::net::UnixStream> = Arc::new(Mutex::new(Vec::new()));
-
-    // Traffic of the connected tunnel, once a second.
-    {
-        let (service, clients) = (service.clone(), clients.clone());
-        std::thread::spawn(move || {
-            loop {
-                std::thread::sleep(std::time::Duration::from_secs(1));
-                let events = lock(&service).tick();
-                broadcast(&clients, events);
-            }
-        });
-    }
-
-    for (number, stream) in (1u64..).zip(listener.incoming()) {
-        let stream = match stream {
-            Ok(stream) => stream,
-            Err(err) => {
-                eprintln!("Connection refused: {err}");
-                continue;
-            }
-        };
-        let reader = stream.try_clone()?;
-        let (service, clients) = (service.clone(), clients.clone());
-        std::thread::spawn(move || serve_client(number, reader, stream, &service, &clients));
-    }
-    Ok(())
+    serve(listener.incoming(), service)
 }

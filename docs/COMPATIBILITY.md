@@ -93,8 +93,8 @@ Native apps on top of the same core (`crates/core`) and a tunnel service
 
 | System | Status | Targets |
 |---|---|---|
-| Windows | Planned. The service's logic compiles for Windows (x86_64) and is tested; the driver backend and the interface are not written | Windows 10 and 11, x64 and ARM64; WireGuard® through WireGuardNT, OpenVPN through ovpn-dco-win; interface in WinUI 3 |
-| macOS | Planned. Same: the service compiles for macOS (Apple silicon) and is tested | macOS 13 Ventura and later, Apple silicon and Intel; interface in SwiftUI (menu bar app) |
+| Windows | Planned. The tunnel service (WireGuardNT, ovpn-dco-win, named pipe, encrypted storage, Windows service) is written and compiles for Windows x64, never run yet; the interface is not written (docs/WINDOWS.md) | Windows 10 and 11, x64 and ARM64; WireGuard® through WireGuardNT, OpenVPN through ovpn-dco-win; interface in WinUI 3 |
+| macOS | Planned. The root helper (BoringTun, `openvpn`, launchd) is written, not compiled for macOS yet; the interface is not written (docs/MACOS.md) | macOS 13 Ventura and later, Apple silicon and Intel; interface in SwiftUI (menu bar app) |
 
 Distribution on both: an installer from the website, no store, no paid
 account (see the plan for what this means for the first launch).
