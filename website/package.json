@@ -13,7 +13,7 @@
 		"build": "node scripts/assets.js && vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
-		"check": "node scripts/assets.js && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && node scripts/contrast.js"
+		"check": "node scripts/assets.js && paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --strategy url baseLocale && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && node scripts/contrast.js"
 	},
 	"devDependencies": {
 		"@fontsource-variable/bricolage-grotesque": "5.3.0",

@@ -1,9 +1,10 @@
 # Plan: the website, `tunnelbird.ferhatsn.fr`
 
 Status: **site written** (`website/`, 2026-10-30) in the validated A+B
-direction (see `website/DESIGN.md`); not deployed yet. Still open below:
-the package-signing CronJob, the deployment on the cluster, analytics (none
-so far).
+direction (see `website/DESIGN.md`). **Deployment prepared** (2026-10-29):
+container image, workflow, cluster manifests on the `feat/tunnelbird-site`
+branch of `ferhat-k8s`; not deployed yet (first image to publish). Still
+open below: the package-signing CronJob, analytics (none so far).
 
 ## What the site is for
 
@@ -109,18 +110,55 @@ choose: the NFS share or local). Alternative without anything new: GitHub
 Pages hosting the repositories (but then the key would have to be a CI secret,
 which the rules forbid).
 
+Where the CronJob writes (both pods must read it, so not a local disk):
+
+| Option | New in the cluster | For | Against |
+|---|---|---|---|
+| **S3 bucket `tunnelbird` on Garage** (recommended) | a bucket and a key, like every project | nothing to mount: nginx proxies `/apt/`, `/rpm/`, `/tunnelbird.gpg`, `/latest.json` to the bucket; the site pods stay read-only and stateless | one more `location` per path in nginx |
+| Volume on the NAS (csi-driver-nfs, already there) | a PersistentVolume | plain files, simplest CronJob | the site's pods then wait for the NAS at start-up, like the media apps |
+
+Either way: the CronJob image (`reprepro`, `createrepo_c`, `gpg`) pinned by
+digest, the GPG key in a SOPS secret, and the key created by the owner.
+
 ## Deployment (like the portfolio)
 
-- `.github/workflows/website.yml`: on changes under `website/`, test, build the
-  image, scan it with Trivy (pinned binary), push to GHCR.
-- `ferhat-k8s/apps/tunnelbird/`: namespace, Deployment (2 replicas,
-  non-root, read-only root filesystem, no service account token), Service,
-  IngressRoute for `tunnelbird.ferhatsn.fr` with TLS, the CronJob, kustomize
-  image digest kept up to date by Image Updater, Argo CD application.
-- DNS: a public record for `tunnelbird.ferhatsn.fr` to the existing entry point.
-- Security headers like the portfolio (CSP, HSTS…), CrowdSec already in front.
+- **Image** (`website/Dockerfile`): the static build in
+  `nginx-unprivileged` (alpine), both base images pinned by digest, security
+  updates applied, curl removed. Read-only root filesystem, uid 101, port 8080.
+  Caching and security headers in `website/nginx/` (HSTS, nosniff, referrer
+  and permissions policies, `frame-ancestors 'none'`, COOP; the rest of the
+  CSP is in each page, by hash). Checked: Trivy HIGH/CRITICAL clean.
+- **Workflow** (`.github/workflows/website.yml`): on pull requests touching
+  the site, build (type check, contrast test, build), Trivy scan (pinned
+  binary, blocking), serve the image read-only and run smoke tests (every
+  page, the 404, the relative redirect, `install.sh` as text, the headers).
+  On `main`, the same image is pushed to GHCR as `latest` and `<sha>`.
+- **Cluster** (`ferhat-k8s`, `apps/tunnelbird/` and `argocd/apps/tunnelbird.yaml`,
+  project `sites`): namespace (restricted pod security), Deployment (2
+  replicas spread over the nodes, non-root, read-only, no service account
+  token, 16 MiB requested, 64 MiB limit), Service, HTTPRoute on the Traefik
+  Gateway with the `*.ferhatsn.fr` certificate, PodDisruptionBudget, GHCR pull
+  secret (SOPS). Image Updater pins the digest of each new `latest`. The site
+  also appears in the Traefik dashboard and the alerts under “Tunnelbird
+  (site)”.
+- **DNS**: nothing to do, the `*.ferhatsn.fr` record already sends
+  `tunnelbird.ferhatsn.fr` to the home entry point.
+- CrowdSec already filters in front of Traefik.
 - Same rule as the portfolio: nothing on the site reveals the hosting
   (no host names, IPs, versions).
+
+### First deployment
+
+Hosted runners cost minutes while the repository is private, so the first
+image may be published from the owner's computer (same Dockerfile):
+
+```sh
+docker build -f website/Dockerfile -t ghcr.io/ferhatte10/tunnelbird-website:latest .
+docker push ghcr.io/ferhatte10/tunnelbird-website:latest
+```
+
+Then merge `feat/tunnelbird-site` in `ferhat-k8s`: Argo CD creates the app,
+Image Updater pins the digest, and the site answers within a few minutes.
 
 ## Steps
 

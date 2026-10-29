@@ -1,7 +1,19 @@
 # Plan: continuous integration and the first release
 
-Status: **plan only**. Nothing runs on GitHub until the Actions minutes are back
-(or the repository is public, where hosted runners are free).
+Status: **written** (2026-10-29) in `.github/`: `check.yml`, `service.yml`,
+`flatpak.yml`, `install-sh.yml`, `website.yml`, `release.yml`, `dependabot.yml`.
+Not run on GitHub yet: the Actions minutes are used up while the repository is
+private (hosted runners are free once it is public). Until then pull requests
+are merged by hand and the site image is published from the owner's computer.
+
+Checked locally (2026-10-29): `actionlint` 1.7.12 (with ShellCheck on every
+`run` block) clean; `make check`, the ShellCheck step and `make deb` with the
+workflow's exact package list in a clean Ubuntu 24.04 container; `make rpm` with the
+workflow's commands (`dnf builddep`) in a clean Fedora 42 container;
+the four `install.sh` dry runs; the release's version check (right and wrong
+tag) and its notes / `latest.json` step; the website image's smoke tests.
+Not checked: the Windows and macOS jobs, the Flatpak action, the arm64
+runners, the attestation and `gh release` steps (GitHub only).
 
 ## Goals
 
@@ -82,19 +94,34 @@ jobs:
 {
   "version": "0.2.0",
   "date": "2026-11-20",
-  "url": "https://tunnelbird.ferhatsn.fr/download",
-  "notes": { "en": "…", "fr": "…" },
-  "minimum": "0.1.0"
+  "url": "https://tunnelbird.ferhatsn.fr/install/"
 }
 ```
+
+  The app reads only `version` (`src/update.rs`).
 
 Budget per release: about 25 minutes over all jobs (free once public).
 
 ### 4. Dependabot
 
-- `cargo` weekly, grouped minor/patch, plus `github-actions` monthly.
+- `cargo` and the website's `bun` weekly, grouped minor/patch;
+  `github-actions` and the website's base images (`docker`) monthly.
 - After a `cargo` update, the Flatpak job reminds to regenerate
   `cargo-sources.json` (or a small job regenerates it on the Dependabot branch).
+
+### 5. `service.yml`: the core and the service on Windows and macOS
+
+- `windows-2025` and `macos-15`: clippy `-D warnings`, tests and a release
+  build of `tunnelbird-core` (without gettext) and `tunnelbird-service`.
+- Path filter (`crates/`, `Cargo.lock`): those runners cost 2× and 10× the
+  minutes while private. Expected to fail at first: that code was written
+  without those systems (`docs/WINDOWS.md`, `docs/MACOS.md`).
+
+### 6. `install-sh.yml` and `website.yml`
+
+- `install.sh --dry-run` in Ubuntu 24.04, Debian 13, Fedora 42 and Arch
+  containers (pinned by digest): each must choose apt, apt, dnf, Flatpak.
+- `website.yml`: see `website.md`, “Deployment”.
 
 ## Branch protection (when public)
 
