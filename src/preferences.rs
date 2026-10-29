@@ -2,7 +2,7 @@
 // Copyright 2026 Ferhat Saidoun
 
 //! Preferences dialog, in two pages:
-//! - General: style, language, background mode, start at login;
+//! - General: style, language, background mode, start at login, update checks;
 //! - Automatic Connection: trusted networks (see `trust.rs`).
 //!
 //! Every change is saved at once. The style applies immediately; the language
@@ -19,6 +19,7 @@ use gtk::glib;
 use crate::LOG_DOMAIN;
 use crate::settings::{self, LANGUAGES, Settings, Style};
 use crate::trust::{Network, NetworkKind, Pin, Policy, normalize_bssid};
+use crate::update::Install;
 use crate::window::clickable;
 
 /// What the dialog needs to know about the app's current state.
@@ -87,6 +88,17 @@ fn general_page(app: &adw::Application, dialog: &adw::PreferencesDialog) -> adw:
         .build();
     clickable(&login_row);
     behaviour.add(&login_row);
+    // Flatpak and Snap installs are told about updates by their store.
+    let updates_row = adw::SwitchRow::builder()
+        .title(gettext("Check for Updates"))
+        .subtitle(gettext(
+            "Once a day, asks tunnelbird.ferhatsn.fr for the latest version number. Nothing about you is sent.",
+        ))
+        .active(current.check_updates)
+        .visible(Install::current().checks_website())
+        .build();
+    clickable(&updates_row);
+    behaviour.add(&updates_row);
     page.add(&behaviour);
 
     let language = adw::PreferencesGroup::builder()
@@ -114,6 +126,13 @@ fn general_page(app: &adw::Application, dialog: &adw::PreferencesDialog) -> adw:
     let weak = dialog.downgrade();
     background_row.connect_active_notify(move |row| {
         update(weak.upgrade().as_ref(), |s| s.background = row.is_active());
+    });
+
+    let weak = dialog.downgrade();
+    updates_row.connect_active_notify(move |row| {
+        update(weak.upgrade().as_ref(), |s| {
+            s.check_updates = row.is_active()
+        });
     });
 
     let weak = dialog.downgrade();
@@ -192,6 +211,7 @@ fn connection_page(dialog: &adw::PreferencesDialog, context: Context) -> adw::Pr
     let current = Settings::load().trust;
     let page = adw::PreferencesPage::builder()
         .title(gettext("Automatic Connection"))
+        .name("connection")
         .icon_name("network-wireless-symbolic")
         .build();
 

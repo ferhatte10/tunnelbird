@@ -20,6 +20,8 @@ NetworkManager over D-Bus and never runs as root. It does not manage servers.
 - `src/window.rs` — UI; all errors go through `Ui::report_error`.
 - `src/settings.rs` / `src/preferences.rs` — preferences file and dialog.
 - `src/tray.rs` — top bar icon + menu (StatusNotifierItem + dbusmenu, own zbus code).
+- `src/update.rs` — install method, update notices, “What's New”.
+- `src/demo.rs` — demo mode for screenshots (`make screenshots`); never real data.
 - `po/` — translations; `po/POTFILES` lists the files with strings.
 
 ## Conventions to keep

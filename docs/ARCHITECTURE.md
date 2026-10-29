@@ -21,7 +21,7 @@ stores no secret itself.
 | `src/provider.rs` | Recognises well-known VPN providers from server, DNS and profile name. Unit-tested | — |
 | `src/nm.rs` | NetworkManager D-Bus client: list, import, activate, deactivate, delete, watch changes | `config` |
 | `src/geo.rs` | Public IP and location from ifconfig.co (libsoup), flag emoji, localized country names from `iso-codes` | — |
-| `src/settings.rs` | Preferences file (`~/.config/tunnelbird/settings.ini`): style, language, background mode | — |
+| `src/settings.rs` | Preferences file (`~/.config/tunnelbird/settings.ini`): style, language, background mode, trusted networks, update checks | — |
 | `src/preferences.rs` | Preferences dialog; restarts the app to apply a new language | `settings` |
 | `src/tray.rs` | Top bar icon (`org.kde.StatusNotifierItem`) and its menu (`com.canonical.dbusmenu`) on the session bus | — |
 | `src/health.rs` | Tells a working tunnel from a silent server, from packet counters. Unit-tested | — |
@@ -29,6 +29,8 @@ stores no secret itself.
 | `src/share.rs` | Export as `.conf` (mode 0600) and QR code (`qrcode` crate, drawn with Cairo) | `config` |
 | `src/trust.rs` | Trusted networks rule: when joining which network connects which tunnel. Unit-tested | — |
 | `src/traffic.rs` | Reads interface byte counters, draws the live graph with Cairo | — |
+| `src/update.rs` | How the app was installed, new version checks (`latest.json`, Flatpak portal), restart after an update, release notes. Unit-tested | `geo`, `portal` |
+| `src/demo.rs` | Demo mode (`TUNNELBIRD_DEMO`): made-up tunnels and traffic for store screenshots, isolated settings | `config`, `settings` |
 | `src/window.rs` | Builds the window, reacts to user actions and NetworkManager signals | all of the above |
 
 ## Key decisions
@@ -132,6 +134,32 @@ its BSSID; a network trusted from the saved list pins the first access point
 it is joined through. Unknown access points of a trusted name count as
 untrusted; Preferences then offer to trust that access point (new router,
 repeater). Pins are stored as `BSSID SSID` entries.
+
+## Updates
+
+Tunnelbird never replaces its own files (`src/update.rs`). It works out how it
+was installed and says how the new version arrives: the Flatpak portal
+(`CreateUpdateMonitor`, then “Update”), snapd by itself, the system updates for
+the website's APT/DNF repository (an explanation with the command), the website
+download page for a package installed by hand, nothing for a source build.
+The last two read `https://tunnelbird.ferhatsn.fr/latest.json` at most once a
+day (switch in Preferences). A version installed while the app runs (the
+binary on disk is “deleted”, the snap revision changed, the portal's local
+commit differs) shows “Restart”: the restart re-executes the new binary, or
+asks the Flatpak portal to spawn the latest version. The first start of a new
+version offers “What's New”, read from the metainfo's newest `<release>`.
+
+Testing from a source build: `TUNNELBIRD_INSTALL=package` (or `apt`, `dnf`,
+`flatpak`, `snap`) pretends another install method, and
+`TUNNELBIRD_UPDATE_URL` points the check to another `latest.json`.
+
+## Screenshots
+
+`make screenshots` runs the app in demo mode (made-up tunnels with
+documentation addresses, settings in a temporary folder, no NetworkManager
+call) inside an invisible GNOME Shell started with its own D-Bus session,
+runtime folder and settings (GNOME defaults, no distribution overrides). GNOME
+Shell captures the window with its frame and shadow, in English and French.
 
 ## Error handling
 

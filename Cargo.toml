@@ -2,7 +2,7 @@
 name = "tunnelbird"
 version = "0.1.0"
 edition = "2024"
-description = "Connect to your VPN tunnels in one click"
+description = "Connect to your VPN in one click"
 license = "GPL-3.0-or-later"
 authors = ["Ferhat Saidoun"]
 homepage = "https://ferhatsn.fr"

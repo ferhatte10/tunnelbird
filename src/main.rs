@@ -5,6 +5,7 @@
 //! built on top of NetworkManager.
 //!
 //! Module map (see `docs/ARCHITECTURE.md`):
+//! - [`demo`]    made-up data for screenshots (`TUNNELBIRD_DEMO`);
 //! - [`config`]  parses `wg-quick` `.conf` files, [`editor`] shows and edits them;
 //! - [`geo`]     looks up the public IP and its location;
 //! - [`health`]  tells a working tunnel from one whose server stays silent;
@@ -14,9 +15,11 @@
 //! - [`share`]   exports a tunnel as a file or a QR code;
 //! - [`traffic`] reads interface counters and draws the live graph;
 //! - [`trust`]   decides when to connect automatically (trusted networks);
+//! - [`update`]  tells when a new version is out and how it arrives;
 //! - [`window`]  builds the user interface.
 
 mod config;
+mod demo;
 mod editor;
 mod geo;
 mod health;
@@ -29,6 +32,7 @@ mod share;
 mod traffic;
 mod tray;
 mod trust;
+mod update;
 mod window;
 
 use std::os::unix::process::CommandExt;
@@ -56,13 +60,21 @@ static START_HIDDEN: AtomicBool = AtomicBool::new(false);
 
 fn main() -> glib::ExitCode {
     install_panic_logger();
+    if demo::enabled() {
+        demo::prepare();
+    }
     let settings = settings::Settings::load();
     settings::apply_language(&settings.language);
     init_i18n();
 
     let app = adw::Application::builder()
         .application_id(APP_ID)
-        .flags(gio::ApplicationFlags::HANDLES_OPEN)
+        .flags(if demo::enabled() {
+            // Runs next to a real instance, never instead of it.
+            gio::ApplicationFlags::HANDLES_OPEN | gio::ApplicationFlags::NON_UNIQUE
+        } else {
+            gio::ApplicationFlags::HANDLES_OPEN
+        })
         .build();
     app.add_main_option(
         "background",
@@ -87,6 +99,9 @@ fn main() -> glib::ExitCode {
         gtk::Window::set_default_icon_name(APP_ID);
         setup_app_actions(app);
         let ui = window::Ui::new(app);
+        if let Some(dir) = std::env::var_os("TUNNELBIRD_SCREENSHOTS").filter(|_| demo::enabled()) {
+            glib::spawn_future_local(ui.clone().take_screenshots(dir.into()));
+        }
 
         let on_activate = ui.clone();
         app.connect_activate(move |_| {
@@ -102,6 +117,9 @@ fn main() -> glib::ExitCode {
     });
 
     let status = app.run();
+    if demo::enabled() {
+        demo::cleanup();
+    }
     if RESTART.load(Ordering::SeqCst) {
         relaunch();
     }
@@ -117,8 +135,19 @@ pub fn request_restart(app: &adw::Application) {
 /// Replaces this process with a fresh one. The old instance has released its
 /// D-Bus name by now, so the new one starts as the primary instance.
 fn relaunch() {
+    if portal::in_flatpak() {
+        let spawned = glib::MainContext::default().block_on(portal::spawn_latest_version());
+        if let Err(err) = spawned {
+            glib::g_critical!(LOG_DOMAIN, "Cannot restart Tunnelbird: {err}");
+        }
+        return;
+    }
     match std::env::current_exe() {
         Ok(exe) => {
+            // After an update the running binary is “deleted”: start the new
+            // one installed at the same path.
+            let path = exe.to_string_lossy();
+            let exe = path.strip_suffix(" (deleted)").unwrap_or(&path);
             let err = std::process::Command::new(exe).exec();
             glib::g_critical!(LOG_DOMAIN, "Cannot restart Tunnelbird: {err}");
         }
@@ -139,13 +168,17 @@ fn setup_app_actions(app: &adw::Application) {
             .website(AUTHOR_WEBSITE)
             .copyright(format!("© 2026 {AUTHOR}"))
             .version(env!("CARGO_PKG_VERSION"))
-            .comments(gettext("Connect to your VPN tunnels in one click."))
+            .comments(gettext("Connect to your VPN in one click."))
             // Translators: replace with your names, one per line.
             .artists([AUTHOR])
             .license_type(gtk::License::Gpl30)
             .translator_credits(gettext("translator-credits"))
             .build();
         dialog.add_link(&gettext("Author on GitHub"), AUTHOR_GITHUB);
+        if let Some((version, notes)) = update::release_notes() {
+            dialog.set_release_notes_version(&version);
+            dialog.set_release_notes(&notes);
+        }
         dialog.present(app.active_window().as_ref());
     });
     app.add_action(&about);

@@ -12,6 +12,10 @@ source language; each other language is one file in `po/`.
      --files-from=po/POTFILES --output=po/tunnelbird.pot
    ```
 
+   `--language=Rust` needs gettext 0.24 or newer. With an older one, use
+   `--language=C`: it reads the `gettext("…")` calls the same way (ignore its
+   warnings about `'_` lifetimes).
+
 2. Create your file (here German):
 
    ```sh

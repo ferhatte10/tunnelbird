@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright 2026 Ferhat Saidoun
 
-//! User preferences (style and language), stored in
+//! User preferences and a little app state (update checks), stored in
 //! `$XDG_CONFIG_HOME/tunnelbird/settings.ini` (usually `~/.config`).
 //!
 //! A plain key file needs no GSettings schema to install and works the same
@@ -27,6 +27,13 @@ const KEY_START_AT_LOGIN: &str = "start-at-login";
 const KEY_STRICT: &str = "strict-wifi-check";
 /// Pinned access points, one `BSSID SSID` entry each (the BSSID has a fixed width).
 const KEY_PINS: &str = "trusted-access-points";
+const KEY_CHECK_UPDATES: &str = "check-for-updates";
+/// Unix time of the last successful `latest.json` check.
+const KEY_LAST_CHECK: &str = "last-update-check";
+/// Newer version found by that check, shown again at the next start.
+const KEY_AVAILABLE: &str = "update-available";
+/// Version that ran last, to say “What's New” once after an update.
+const KEY_LAST_VERSION: &str = "last-version";
 
 /// Interface languages offered in Preferences, as (code, endonym).
 /// Add a line here when a new `po/<code>.po` translation lands (see docs/TRANSLATING.md).
@@ -81,6 +88,11 @@ pub struct Settings {
     pub trust: Policy,
     /// Remembered only in Flatpak, where the host autostart folder is not visible.
     pub start_at_login: bool,
+    /// Look for a new version once a day (installs that rely on the website).
+    pub check_updates: bool,
+    pub last_update_check: i64,
+    pub update_available: String,
+    pub last_version: String,
 }
 
 impl Default for Settings {
@@ -90,6 +102,10 @@ impl Default for Settings {
             language: String::new(),
             background: true,
             start_at_login: false,
+            check_updates: true,
+            last_update_check: 0,
+            update_available: String::new(),
+            last_version: String::new(),
             trust: Policy {
                 trust_wired: true,
                 ..Policy::default()
@@ -144,6 +160,16 @@ impl Settings {
             background,
             trust,
             start_at_login: file.boolean(GROUP, KEY_START_AT_LOGIN).unwrap_or(false),
+            check_updates: file.boolean(GROUP, KEY_CHECK_UPDATES).unwrap_or(true),
+            last_update_check: file.int64(GROUP, KEY_LAST_CHECK).unwrap_or(0),
+            update_available: file
+                .string(GROUP, KEY_AVAILABLE)
+                .map(|s| s.to_string())
+                .unwrap_or_default(),
+            last_version: file
+                .string(GROUP, KEY_LAST_VERSION)
+                .map(|s| s.to_string())
+                .unwrap_or_default(),
         }
     }
 
@@ -173,6 +199,10 @@ impl Settings {
             .map(|pin| format!("{} {}", pin.bssid, pin.ssid))
             .collect();
         file.set_value(GROUP, KEY_PINS, &string_list_value(&pins));
+        file.set_boolean(GROUP, KEY_CHECK_UPDATES, self.check_updates);
+        file.set_int64(GROUP, KEY_LAST_CHECK, self.last_update_check);
+        file.set_string(GROUP, KEY_AVAILABLE, &self.update_available);
+        file.set_string(GROUP, KEY_LAST_VERSION, &self.last_version);
         file.save_to_file(&path)
             .map_err(|err| format!("{}: {err}", path.display()))
     }

@@ -19,6 +19,7 @@ use gettextrs::gettext;
 use gtk::{gdk, gio, glib};
 
 use crate::config::{self, WgConfig};
+use crate::demo;
 use crate::editor;
 use crate::geo::{self, Location};
 use crate::health::{Health, HealthWatch};
@@ -28,6 +29,7 @@ use crate::share;
 use crate::traffic::{self, Sample, TrafficGraph};
 use crate::tray::{Tray, TrayAction, TrayModel, TrayTunnel};
 use crate::trust::Decision;
+use crate::update::{self, FlatpakEvent, FlatpakMonitor, Install, Manager};
 use crate::{APP_ID, LOG_DOMAIN};
 
 /// Groups bursts of NetworkManager signals into a single refresh.
@@ -44,6 +46,25 @@ const SCALE_WIDTH_CHARS: i32 = 16;
 const TRAY_SPARK_POINTS: usize = 12;
 /// Wait before the single retry of a failed public IP lookup.
 const LOOKUP_RETRY: Duration = Duration::from_secs(3);
+/// First update check after startup, once the network is up.
+const FIRST_UPDATE_CHECK: Duration = Duration::from_secs(30);
+/// How often to see whether the daily update check is due.
+const UPDATE_TICK: Duration = Duration::from_secs(60 * 60);
+/// How often to see whether a new version was installed meanwhile.
+const RESTART_POLL: Duration = Duration::from_secs(60);
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// What the update banner says (see `update.rs`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum UpdateNotice {
+    None,
+    /// A newer version exists; its number when known (Flathub does not say).
+    Available(Option<String>),
+    /// The Flatpak portal is installing it, in percent.
+    Installing(u32),
+    /// Installed: a restart runs it.
+    Restart,
+}
 
 /// Public IP lookup of the connected tunnel, tied to that tunnel's UUID.
 enum GeoState {
@@ -92,6 +113,10 @@ pub struct Ui {
     user_stopped: RefCell<HashSet<String>>,
     /// Profile UUID of the last network seen, to act only when joining a new one.
     last_network: RefCell<Option<String>>,
+    update_banner: adw::Banner,
+    update_notice: RefCell<UpdateNotice>,
+    /// The Flatpak portal's update watcher, in a Flatpak sandbox.
+    flatpak: RefCell<Option<Rc<FlatpakMonitor>>>,
 }
 
 /// The "Active Connection" card: addresses, location and live graph.
@@ -201,8 +226,10 @@ impl Ui {
         stack.add_named(&scrolled, Some("list"));
         stack.add_named(&unavailable, Some("unavailable"));
 
+        let update_banner = adw::Banner::new("");
         let toolbar = adw::ToolbarView::new();
         toolbar.add_top_bar(&header);
+        toolbar.add_top_bar(&update_banner);
         toolbar.set_content(Some(&stack));
         let toasts = adw::ToastOverlay::new();
         toasts.set_child(Some(&toolbar));
@@ -239,11 +266,25 @@ impl Ui {
             health_state: Cell::new(Health::Unknown),
             user_stopped: RefCell::new(HashSet::new()),
             last_network: RefCell::new(None),
+            update_banner,
+            update_notice: RefCell::new(UpdateNotice::None),
+            flatpak: RefCell::new(None),
         });
         ui.setup_actions();
         ui.setup_drop_target();
         ui.setup_traffic_timer();
         ui.setup_close();
+        if demo::enabled() {
+            // Sized for store screenshots (Flathub: 1000×700 at most).
+            ui.window.set_default_size(640, 700);
+            ui.start_demo();
+            // Update notices only when a test `latest.json` is given explicitly.
+            if std::env::var_os("TUNNELBIRD_UPDATE_URL").is_some() {
+                ui.setup_updates();
+            }
+            return ui;
+        }
+        ui.setup_updates();
         glib::spawn_future_local(ui.clone().start());
         glib::spawn_future_local(ui.clone().start_tray());
         ui
@@ -259,6 +300,7 @@ impl Ui {
                 // Clone first: a RefCell borrow must not live across `.await`.
                 let nm = ui.nm.borrow().clone();
                 let (network, saved_wifi) = match nm {
+                    None if demo::enabled() => (Some(demo::network()), demo::saved_wifi()),
                     Some(nm) => (
                         nm.current_network().await.unwrap_or_else(|err| {
                             glib::g_debug!(LOG_DOMAIN, "Cannot read the current network: {err}");
@@ -385,6 +427,93 @@ impl Ui {
             }
         }
         self.refresh().await;
+    }
+
+    /// Demo mode: made-up tunnels and a full graph instead of NetworkManager.
+    fn start_demo(self: &Rc<Self>) {
+        let tunnels = demo::tunnels();
+        if let Some(connected) = tunnels.first() {
+            *self.geo.borrow_mut() = GeoState::Ready(connected.uuid.clone(), demo::location());
+        }
+        *self.tunnels.borrow_mut() = tunnels;
+        for tick in 0..demo::HISTORY {
+            self.live.graph.push(demo::sample(tick));
+        }
+        self.render();
+    }
+
+    /// Takes the store screenshots in `dir` (demo mode), then quits.
+    pub async fn take_screenshots(self: Rc<Self>, dir: std::path::PathBuf) {
+        let settle = |ms| glib::timeout_future(Duration::from_millis(ms));
+        if let Err(err) = std::fs::create_dir_all(&dir) {
+            glib::g_critical!(LOG_DOMAIN, "Cannot create {}: {err}", dir.display());
+            return self.app.quit();
+        }
+        let shot = async |name: &str| {
+            let path = dir.join(format!("{name}.png"));
+            match demo::capture(&self.window, &path).await {
+                Ok(()) => glib::g_message!(LOG_DOMAIN, "Saved {}", path.display()),
+                Err(err) => glib::g_critical!(LOG_DOMAIN, "Cannot save {name}: {err}"),
+            }
+        };
+        let close_dialog = || {
+            if let Some(dialog) = self.window.visible_dialog() {
+                dialog.force_close();
+            }
+        };
+
+        settle(3000).await;
+        shot("main").await;
+
+        // The whole tunnel list, scrolled to the bottom.
+        let scrolled = self
+            .stack
+            .child_by_name("list")
+            .and_downcast::<gtk::ScrolledWindow>();
+        if let Some(scrolled) = &scrolled {
+            let adjustment = scrolled.vadjustment();
+            adjustment.set_value(adjustment.upper() - adjustment.page_size());
+        }
+        settle(800).await;
+        shot("tunnels").await;
+        if let Some(scrolled) = &scrolled {
+            scrolled.vadjustment().set_value(0.0);
+        }
+
+        let window = self.window.clone();
+        glib::spawn_future_local(async move {
+            let config = demo::config(false);
+            editor::run(&window, editor::Mode::Import, "home-server", &config, None).await;
+        });
+        settle(1200).await;
+        shot("import").await;
+        close_dialog();
+        settle(800).await;
+
+        self.app.activate_action("preferences", None);
+        settle(1200).await;
+        if let Some(prefs) = self
+            .window
+            .visible_dialog()
+            .and_downcast::<adw::PreferencesDialog>()
+        {
+            prefs.set_visible_page_name("connection");
+        }
+        settle(800).await;
+        shot("trusted-networks").await;
+        close_dialog();
+        settle(800).await;
+
+        share::show_qr(&self.window, "Amsterdam", &demo::config(true));
+        settle(1200).await;
+        shot("qr-code").await;
+        close_dialog();
+        settle(800).await;
+
+        adw::StyleManager::default().set_color_scheme(adw::ColorScheme::ForceDark);
+        settle(1500).await;
+        shot("main-dark").await;
+        self.app.quit();
     }
 
     fn show_unavailable(&self, detail: &str) {
@@ -622,6 +751,267 @@ impl Ui {
         });
     }
 
+    /// Update notices (see `update.rs`): “What's New” after an update, then
+    /// whatever tells this install method about new versions.
+    fn setup_updates(self: &Rc<Self>) {
+        let ui = self.clone();
+        self.update_banner
+            .connect_button_clicked(move |_| ui.update_clicked());
+        self.whats_new();
+
+        let install = Install::current();
+        match install {
+            Install::Flatpak => {
+                glib::spawn_future_local(self.clone().watch_flatpak());
+            }
+            Install::Repository(_) | Install::Package => self.schedule_update_checks(),
+            Install::Snap | Install::Source => {}
+        }
+        if install != Install::Flatpak {
+            let ui = self.clone();
+            glib::timeout_add_local(RESTART_POLL, move || {
+                if update::installed_while_running(install) {
+                    ui.show_update(UpdateNotice::Restart);
+                    return glib::ControlFlow::Break;
+                }
+                glib::ControlFlow::Continue
+            });
+        }
+    }
+
+    /// First start of a new version: remember it and offer its release notes.
+    fn whats_new(&self) {
+        let mut settings = Settings::load();
+        let previous = std::mem::replace(&mut settings.last_version, VERSION.to_owned());
+        if previous == VERSION {
+            return;
+        }
+        if !update::is_newer(&settings.update_available, VERSION) {
+            settings.update_available.clear();
+        }
+        if let Err(err) = settings.save() {
+            glib::g_warning!(LOG_DOMAIN, "Cannot save settings: {err}");
+        }
+        // Nothing to announce on the very first start or after a downgrade.
+        if previous.is_empty() || !update::is_newer(VERSION, &previous) {
+            return;
+        }
+        self.toasts.add_toast(
+            adw::Toast::builder()
+                .title(gettext("Tunnelbird was updated to {version}").replace("{version}", VERSION))
+                .button_label(gettext("_What's New"))
+                .action_name("app.about")
+                .timeout(10)
+                .build(),
+        );
+    }
+
+    /// Installs that rely on the website: `latest.json` once a day at most.
+    fn schedule_update_checks(self: &Rc<Self>) {
+        // A version found before this start is still newer: no need to ask again.
+        let known = Settings::load().update_available;
+        if update::is_newer(&known, VERSION) {
+            self.show_update(UpdateNotice::Available(Some(known)));
+        }
+        let ui = self.clone();
+        glib::timeout_add_local_once(FIRST_UPDATE_CHECK, move || {
+            ui.check_for_update();
+            glib::timeout_add_local(UPDATE_TICK, move || {
+                ui.check_for_update();
+                glib::ControlFlow::Continue
+            });
+        });
+    }
+
+    fn check_for_update(self: &Rc<Self>) {
+        let settings = Settings::load();
+        if !settings.check_updates || !update::check_due(settings.last_update_check, unix_now()) {
+            return;
+        }
+        let ui = self.clone();
+        glib::spawn_future_local(async move {
+            let latest = match update::fetch_latest(&ui.http).await {
+                Ok(latest) => latest,
+                // Offline or the site is down: normal, tried again within the hour.
+                Err(err) => return glib::g_info!(LOG_DOMAIN, "Cannot check for updates: {err}"),
+            };
+            let newer = update::is_newer(&latest.version, VERSION);
+            let mut settings = Settings::load();
+            settings.last_update_check = unix_now();
+            settings.update_available = if newer {
+                latest.version.clone()
+            } else {
+                String::new()
+            };
+            if let Err(err) = settings.save() {
+                glib::g_warning!(LOG_DOMAIN, "Cannot save settings: {err}");
+            }
+            if newer {
+                ui.show_update(UpdateNotice::Available(Some(latest.version)));
+            }
+        });
+    }
+
+    /// Follows the Flatpak portal: Flathub has a new version, it is being
+    /// installed, it is installed.
+    async fn watch_flatpak(self: Rc<Self>) {
+        let (monitor, events) = match FlatpakMonitor::start().await {
+            Ok(started) => started,
+            Err(err) => {
+                return glib::g_info!(LOG_DOMAIN, "No Flatpak update monitor: {err}");
+            }
+        };
+        *self.flatpak.borrow_mut() = Some(Rc::new(monitor));
+        let mut events = std::pin::pin!(events);
+        while let Some(event) = events.next().await {
+            match event {
+                FlatpakEvent::Available => self.show_update(UpdateNotice::Available(None)),
+                FlatpakEvent::Progress(percent) => {
+                    self.show_update(UpdateNotice::Installing(percent))
+                }
+                FlatpakEvent::Installed => self.show_update(UpdateNotice::Restart),
+                FlatpakEvent::Failed(detail) => self.update_failed(&detail),
+            }
+        }
+    }
+
+    fn update_failed(&self, detail: &str) {
+        self.update_notice.replace(UpdateNotice::None);
+        self.show_update(UpdateNotice::Available(None));
+        self.report_error(&gettext("Cannot update Tunnelbird"), detail);
+    }
+
+    /// Shows `notice` in the banner and the top bar, and as a notification
+    /// when the window is hidden. A pending restart is never replaced.
+    fn show_update(&self, notice: UpdateNotice) {
+        {
+            let current = self.update_notice.borrow();
+            if *current == notice || *current == UpdateNotice::Restart {
+                return;
+            }
+        }
+        let install = Install::current();
+        let (title, button) = match &notice {
+            UpdateNotice::None => (String::new(), None),
+            UpdateNotice::Available(version) => (
+                match version {
+                    Some(version) => {
+                        gettext("Tunnelbird {version} is available").replace("{version}", version)
+                    }
+                    None => gettext("A new version of Tunnelbird is available"),
+                },
+                Some(match install {
+                    Install::Flatpak => gettext("_Update"),
+                    Install::Repository(_) => gettext("_How to Update"),
+                    _ => gettext("_Download"),
+                }),
+            ),
+            UpdateNotice::Installing(percent) => (
+                gettext("Updating Tunnelbird… {percent}%")
+                    .replace("{percent}", &percent.to_string()),
+                None,
+            ),
+            // snapd starts the new revision itself once the app has quit.
+            UpdateNotice::Restart if install == Install::Snap => (
+                gettext("Tunnelbird was updated: quit it and open it again to finish"),
+                Some(gettext("_Quit")),
+            ),
+            UpdateNotice::Restart => (
+                gettext("Tunnelbird was updated: restart it to finish"),
+                Some(gettext("_Restart")),
+            ),
+        };
+        self.update_banner.set_title(&title);
+        self.update_banner.set_button_label(button.as_deref());
+        self.update_banner
+            .set_revealed(notice != UpdateNotice::None);
+        let notify = matches!(notice, UpdateNotice::Available(_) | UpdateNotice::Restart);
+        if notify && !self.window.is_visible() {
+            // Clicking the notification opens the window, where the banner is.
+            self.app
+                .send_notification(Some("update"), &gio::Notification::new(&title));
+        }
+        self.update_notice.replace(notice);
+        self.update_tray();
+    }
+
+    fn update_clicked(self: &Rc<Self>) {
+        let notice = self.update_notice.borrow().clone();
+        match (notice, Install::current()) {
+            (UpdateNotice::Restart, Install::Snap) => self.app.quit(),
+            (UpdateNotice::Restart, _) => crate::request_restart(&self.app),
+            (UpdateNotice::Available(_), Install::Flatpak) => {
+                let Some(monitor) = self.flatpak.borrow().clone() else {
+                    return;
+                };
+                self.show_update(UpdateNotice::Installing(0));
+                let ui = self.clone();
+                glib::spawn_future_local(async move {
+                    if let Err(err) = monitor.update().await {
+                        ui.update_failed(&err.to_string());
+                    }
+                });
+            }
+            (UpdateNotice::Available(_), Install::Repository(manager)) => {
+                self.explain_system_update(manager)
+            }
+            (UpdateNotice::Available(_), _) => {
+                gtk::UriLauncher::new(update::DOWNLOAD_URL).launch(
+                    Some(&self.window),
+                    None::<&gio::Cancellable>,
+                    |result| {
+                        if let Err(err) = result {
+                            glib::g_warning!(LOG_DOMAIN, "Cannot open the download page: {err}");
+                        }
+                    },
+                );
+            }
+            (UpdateNotice::None | UpdateNotice::Installing(_), _) => {}
+        }
+    }
+
+    /// Installed from the website's repository: the update comes with the
+    /// system's, so say where to find it rather than doing it.
+    fn explain_system_update(self: &Rc<Self>, manager: Manager) {
+        let command = match manager {
+            Manager::Apt => "sudo apt update && sudo apt upgrade",
+            Manager::Dnf => "sudo dnf upgrade --refresh",
+        };
+        let dialog = adw::AlertDialog::new(
+            Some(&gettext("Update Tunnelbird")),
+            Some(&gettext(
+                "The new version comes with your system updates: open Software, or your update manager, and install the available updates. From a terminal:",
+            )),
+        );
+        let label = gtk::Label::builder()
+            .label(command)
+            .css_classes(["monospace"])
+            .wrap(true)
+            .hexpand(true)
+            .xalign(0.0)
+            .build();
+        let copy = gtk::Button::builder()
+            .icon_name("edit-copy-symbolic")
+            .tooltip_text(gettext("Copy"))
+            .valign(gtk::Align::Center)
+            .css_classes(["flat"])
+            .build();
+        clickable(&copy);
+        copy.connect_clicked(move |button| {
+            button.clipboard().set_text(command);
+            button.set_icon_name("object-select-symbolic");
+        });
+        let row = gtk::Box::builder()
+            .spacing(6)
+            .css_classes(["card", "command"])
+            .build();
+        row.append(&label);
+        row.append(&copy);
+        dialog.set_extra_child(Some(&row));
+        dialog.add_response("close", &gettext("_Close"));
+        dialog.present(Some(&self.window));
+    }
+
     /// Publishes the top bar icon and handles its menu clicks.
     async fn start_tray(self: Rc<Self>) {
         let (sender, mut actions) = mpsc::unbounded();
@@ -718,6 +1108,11 @@ impl Ui {
             down: line("↓", recent.iter().map(|s| s.rx).collect(), last.rx),
             up: line("↑", recent.iter().map(|s| s.tx).collect(), last.tx),
             location,
+            update: match &*self.update_notice.borrow() {
+                UpdateNotice::Available(_) => Some(gettext("Update Available…")),
+                UpdateNotice::Restart => Some(gettext("Restart to Finish the Update…")),
+                UpdateNotice::None | UpdateNotice::Installing(_) => None,
+            },
             open_label: gettext("Open Tunnelbird"),
             disconnect_label: gettext("Disconnect"),
             quit_label: gettext("Quit"),
@@ -1193,7 +1588,12 @@ impl Ui {
             self.set_health(Health::Unknown, None);
             return;
         };
-        let Some(counters) = traffic::read_counters(&tunnel.interface) else {
+        let counters = if demo::enabled() {
+            Some(demo::counters())
+        } else {
+            traffic::read_counters(&tunnel.interface)
+        };
+        let Some(counters) = counters else {
             glib::g_debug!(LOG_DOMAIN, "No counters for interface {}", tunnel.interface);
             return;
         };
@@ -1598,6 +1998,12 @@ fn single_line(classes: &[&str]) -> gtk::Label {
         .ellipsize(gtk::pango::EllipsizeMode::End)
         .css_classes(classes.to_vec())
         .build()
+}
+
+fn unix_now() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |elapsed| elapsed.as_secs() as i64)
 }
 
 fn per_second(bytes: f64) -> String {

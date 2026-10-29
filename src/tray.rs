@@ -40,6 +40,7 @@ const ID_STATUS: i32 = 1;
 const ID_DOWN: i32 = 2;
 const ID_UP: i32 = 3;
 const ID_LOCATION: i32 = 4;
+const ID_UPDATE: i32 = 5;
 const ID_OPEN: i32 = 10;
 const ID_DISCONNECT: i32 = 11;
 const ID_QUIT: i32 = 12;
@@ -72,6 +73,8 @@ pub struct TrayModel {
     pub down: String,
     pub up: String,
     pub location: Option<String>,
+    /// “Update available” and the like: opens the window, where the banner is.
+    pub update: Option<String>,
     pub open_label: String,
     pub disconnect_label: String,
     pub quit_label: String,
@@ -430,7 +433,7 @@ impl Menu {
 impl Menu {
     fn clicked(&self, id: i32) {
         let action = match id {
-            ID_OPEN => TrayAction::ShowWindow,
+            ID_OPEN | ID_UPDATE => TrayAction::ShowWindow,
             ID_DISCONNECT => TrayAction::Disconnect,
             ID_QUIT => TrayAction::Quit,
             id if id >= TUNNEL_BASE => {
@@ -467,6 +470,9 @@ fn entries(model: &TrayModel) -> Vec<(i32, HashMap<String, OwnedVariant>)> {
         list.push((TUNNEL_BASE + index as i32, props));
     }
     list.push((ID_SEPARATORS[1], separator()));
+    if let Some(update) = &model.update {
+        list.push((ID_UPDATE, action(update, true)));
+    }
     list.push((ID_OPEN, action(&model.open_label, true)));
     list.push((
         ID_DISCONNECT,

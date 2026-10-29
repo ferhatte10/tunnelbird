@@ -14,6 +14,7 @@ use std::sync::OnceLock;
 use gtk::glib;
 use gtk::glib::translate::IntoGlib;
 use serde::Deserialize;
+use serde::de::DeserializeOwned;
 use soup::prelude::*;
 
 const SERVICE_URL: &str = "https://ifconfig.co/json";
@@ -34,25 +35,25 @@ pub struct Location {
 }
 
 #[derive(Debug)]
-pub enum GeoError {
+pub enum HttpError {
     InvalidUrl(glib::BoolError),
     Request(glib::Error),
     Status(u32),
     Parse(serde_json::Error),
 }
 
-impl fmt::Display for GeoError {
+impl fmt::Display for HttpError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            GeoError::InvalidUrl(err) => write!(f, "{err}"),
-            GeoError::Request(err) => write!(f, "{err}"),
-            GeoError::Status(code) => write!(f, "HTTP {code}"),
-            GeoError::Parse(err) => write!(f, "{err}"),
+            HttpError::InvalidUrl(err) => write!(f, "{err}"),
+            HttpError::Request(err) => write!(f, "{err}"),
+            HttpError::Status(code) => write!(f, "HTTP {code}"),
+            HttpError::Parse(err) => write!(f, "{err}"),
         }
     }
 }
 
-impl std::error::Error for GeoError {}
+impl std::error::Error for HttpError {}
 
 /// One HTTP session for the whole app (connection reuse, shared timeout).
 pub fn new_session() -> soup::Session {
@@ -62,20 +63,28 @@ pub fn new_session() -> soup::Session {
         .build()
 }
 
-pub async fn lookup(session: &soup::Session) -> Result<Location, GeoError> {
-    let message = soup::Message::new("GET", SERVICE_URL).map_err(GeoError::InvalidUrl)?;
+pub async fn lookup(session: &soup::Session) -> Result<Location, HttpError> {
+    get_json(session, SERVICE_URL).await
+}
+
+/// GETs `url` and parses its JSON answer (also used by the update check).
+pub async fn get_json<T: DeserializeOwned>(
+    session: &soup::Session,
+    url: &str,
+) -> Result<T, HttpError> {
+    let message = soup::Message::new("GET", url).map_err(HttpError::InvalidUrl)?;
     if let Some(headers) = message.request_headers() {
         headers.append("Accept", "application/json");
     }
     let body = session
         .send_and_read_future(&message, glib::Priority::DEFAULT)
         .await
-        .map_err(GeoError::Request)?;
+        .map_err(HttpError::Request)?;
     let status = message.status().into_glib() as u32;
     if !(200..300).contains(&status) {
-        return Err(GeoError::Status(status));
+        return Err(HttpError::Status(status));
     }
-    serde_json::from_slice(&body).map_err(GeoError::Parse)
+    serde_json::from_slice(&body).map_err(HttpError::Parse)
 }
 
 /// Flag emoji and "City, Country" (country name in the user's language) for display.

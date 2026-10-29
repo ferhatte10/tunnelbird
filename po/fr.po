@@ -51,8 +51,8 @@ msgstr "Connexion…"
 msgid "Connect “{name}”"
 msgstr "Connecter « {name} »"
 
-msgid "Connect to your VPN tunnels in one click."
-msgstr "Connectez-vous à vos tunnels VPN en un clic."
+msgid "Connect to your VPN in one click."
+msgstr "Connectez-vous à votre VPN en un clic."
 
 msgid "Could not connect to “{name}”. Check the server address and your keys."
 msgstr "Connexion à « {name} » impossible. Vérifiez l’adresse du serveur et vos clés."
@@ -534,3 +534,69 @@ msgstr "Sa borne sera retenue à votre prochaine connexion"
 msgid "Checked against {count} access point(s)"
 msgstr "Vérifié sur {count} borne(s)"
 
+
+msgid "Check for Updates"
+msgstr "Rechercher les mises à jour"
+
+msgid ""
+"Once a day, asks tunnelbird.ferhatsn.fr for the latest version number. "
+"Nothing about you is sent."
+msgstr ""
+"Une fois par jour, demande à tunnelbird.ferhatsn.fr le numéro de la "
+"dernière version. Rien sur vous n’est envoyé."
+
+msgid "Tunnelbird was updated to {version}"
+msgstr "Tunnelbird est passé à la version {version}"
+
+msgid "_What's New"
+msgstr "_Nouveautés"
+
+msgid "Cannot update Tunnelbird"
+msgstr "Impossible de mettre à jour Tunnelbird"
+
+msgid "Tunnelbird {version} is available"
+msgstr "Tunnelbird {version} est disponible"
+
+msgid "A new version of Tunnelbird is available"
+msgstr "Une nouvelle version de Tunnelbird est disponible"
+
+msgid "_Update"
+msgstr "_Mettre à jour"
+
+msgid "_How to Update"
+msgstr "_Comment mettre à jour"
+
+msgid "_Download"
+msgstr "_Télécharger"
+
+msgid "Updating Tunnelbird… {percent}%"
+msgstr "Mise à jour de Tunnelbird… {percent} %"
+
+msgid "Tunnelbird was updated: quit it and open it again to finish"
+msgstr "Tunnelbird a été mis à jour : quittez-le et rouvrez-le pour terminer"
+
+msgid "_Quit"
+msgstr "_Quitter"
+
+msgid "Tunnelbird was updated: restart it to finish"
+msgstr "Tunnelbird a été mis à jour : redémarrez-le pour terminer"
+
+msgid "Update Tunnelbird"
+msgstr "Mettre à jour Tunnelbird"
+
+msgid ""
+"The new version comes with your system updates: open Software, or your "
+"update manager, and install the available updates. From a terminal:"
+msgstr ""
+"La nouvelle version arrive avec les mises à jour du système : ouvrez "
+"Logiciels, ou votre gestionnaire de mises à jour, et installez les mises à "
+"jour disponibles. Depuis un terminal :"
+
+msgid "Copy"
+msgstr "Copier"
+
+msgid "Update Available…"
+msgstr "Mise à jour disponible…"
+
+msgid "Restart to Finish the Update…"
+msgstr "Redémarrer pour terminer la mise à jour…"

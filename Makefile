@@ -5,6 +5,8 @@
 #   make dev-install     desktop entry + icons in ~/.local, pointing to the debug
 #                        build: gives `cargo run` its dock icon (no sudo)
 #   make dev-uninstall   remove them
+#   make screenshots     store screenshots in data/screenshots (demo mode,
+#                        invisible GNOME Shell; see build-aux/screenshots.sh)
 
 PREFIX    ?= /usr/local
 DESTDIR   ?=
@@ -14,7 +16,7 @@ LINGUAS   := $(shell grep -v '^\#' po/LINGUAS)
 # rustup installs cargo in ~/.cargo/bin, which is not always in PATH.
 CARGO     ?= $(shell command -v cargo 2>/dev/null || echo $(HOME)/.cargo/bin/cargo)
 
-.PHONY: all run check install install-bin install-data uninstall dev-install dev-uninstall clean
+.PHONY: all run check install install-bin install-data uninstall dev-install dev-uninstall screenshots clean
 
 all:
 	LOCALEDIR=$(LOCALEDIR) $(CARGO) build --release --locked
@@ -74,6 +76,10 @@ dev-uninstall:
 	rm -f $(USER_DATA)/icons/hicolor/symbolic/apps/$(APP_ID)-symbolic.svg
 	rm -f $(USER_DATA)/icons/hicolor/scalable/status/$(APP_ID)-tray-connected.svg
 	rm -f $(USER_DATA)/icons/hicolor/scalable/status/$(APP_ID)-tray-disconnected.svg
+
+screenshots:
+	$(CARGO) build
+	build-aux/screenshots.sh
 
 clean:
 	$(CARGO) clean

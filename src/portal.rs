@@ -2,11 +2,12 @@
 // Copyright 2026 Ferhat Saidoun
 
 //! Desktop portal calls, used when Tunnelbird runs inside a Flatpak sandbox,
-//! where it cannot write the user's autostart folder itself.
+//! where it cannot write the user's autostart folder or restart itself.
 
 use std::collections::HashMap;
 
 use gettextrs::gettext;
+use gtk::glib;
 use zbus::Variant;
 
 /// True inside a Flatpak sandbox.
@@ -38,6 +39,30 @@ pub async fn request_autostart(enabled: bool) -> zbus::Result<()> {
         Some("org.freedesktop.portal.Background"),
         "RequestBackground",
         &("", options),
+    )
+    .await?;
+    Ok(())
+}
+
+/// Starts the newest installed version of Tunnelbird in a new sandbox (after
+/// an update): restarting inside this sandbox would run the old files again.
+pub async fn spawn_latest_version() -> zbus::Result<()> {
+    /// `FLATPAK_SPAWN_FLAGS_LATEST_VERSION`.
+    const LATEST_VERSION: u32 = 2;
+    let conn = zbus::Connection::session().await?;
+    let home = glib::home_dir();
+    let mut cwd = home.as_os_str().as_encoded_bytes().to_vec();
+    cwd.push(0);
+    let argv = vec![b"tunnelbird\0".to_vec()];
+    let fds: HashMap<u32, zbus::OwnedFd> = HashMap::new();
+    let envs: HashMap<&str, &str> = HashMap::new();
+    let options: HashMap<&str, Variant<'_>> = HashMap::new();
+    conn.call_method(
+        Some("org.freedesktop.portal.Flatpak"),
+        "/org/freedesktop/portal/Flatpak",
+        Some("org.freedesktop.portal.Flatpak"),
+        "Spawn",
+        &(cwd, argv, fds, envs, LATEST_VERSION, options),
     )
     .await?;
     Ok(())
