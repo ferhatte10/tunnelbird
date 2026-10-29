@@ -100,6 +100,9 @@ pub struct Ui {
     /// UUIDs the user asked to connect, to detect activations that fail later.
     expecting: RefCell<HashSet<String>>,
     refresh_queued: Cell<bool>,
+    /// Last state asked of the IPv6 guard; `None` until the first check,
+    /// which also removes a guard left by a previous run.
+    ipv6_guard: Cell<Option<bool>>,
     http: soup::Session,
     geo: RefCell<GeoState>,
     app: adw::Application,
@@ -259,6 +262,7 @@ impl Ui {
             busy: RefCell::new(HashSet::new()),
             expecting: RefCell::new(HashSet::new()),
             refresh_queued: Cell::new(false),
+            ipv6_guard: Cell::new(None),
             http: geo::new_session(),
             geo: RefCell::new(GeoState::Idle),
             app: app.clone(),
@@ -558,6 +562,7 @@ impl Ui {
                 glib::spawn_future_local(self.clone().check_network());
                 self.detect_failed_connections(&tunnels);
                 self.detect_drops(&tunnels);
+                self.apply_ipv6_guard(&nm, &tunnels).await;
                 // Rebuilding the rows makes the list jump: only do it on real changes.
                 if *self.tunnels.borrow() == tunnels {
                     return;
@@ -661,6 +666,23 @@ impl Ui {
     /// A tunnel that was connected and is now disconnected, without this app
     /// asking for it, dropped on its own (server gone, network change…): the
     /// traffic no longer goes through the VPN, so the user must know.
+    /// Blocks IPv6 outside the tunnel while a full tunnel carries only IPv4
+    /// (`nm::needs_ipv6_guard`), and lifts the block when it disconnects.
+    async fn apply_ipv6_guard(&self, nm: &Nm, tunnels: &[Tunnel]) {
+        let wanted = nm::needs_ipv6_guard(tunnels);
+        if self.ipv6_guard.replace(Some(wanted)) == Some(wanted) {
+            return;
+        }
+        match nm.set_ipv6_guard(wanted).await {
+            Ok(()) if wanted => glib::g_info!(
+                LOG_DOMAIN,
+                "The tunnel carries only IPv4: IPv6 to the internet is blocked"
+            ),
+            Ok(()) => glib::g_debug!(LOG_DOMAIN, "IPv6 guard off"),
+            Err(err) => glib::g_warning!(LOG_DOMAIN, "Cannot set the IPv6 guard: {err}"),
+        }
+    }
+
     fn detect_drops(&self, tunnels: &[Tunnel]) {
         let old = self.tunnels.borrow();
         let busy = self.busy.borrow();

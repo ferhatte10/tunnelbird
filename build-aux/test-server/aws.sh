@@ -9,22 +9,25 @@
 # Needs AWS credentials (`aws login`). Creates, all named
 # “tunnelbird-openvpn-test”: an EC2 key pair from your *public* SSH key, a
 # security group open to your current public address only (SSH and UDP 1194),
-# and one t4g.nano Ubuntu 24.04 instance. Costs a few cents a day while it
-# exists: run `down` when the tests are over.
+# and one t4g.micro Ubuntu 24.04 instance (Free Tier eligible: the free plan
+# refuses other types). Run `down` when the tests are over.
 #
-# Settings (environment): AWS_REGION (default eu-central-1, Frankfurt, so the
-# app shows another country), SSH_KEY (private key path, default
+# Settings (environment): AWS_REGION (default eu-north-1, Stockholm, so the
+# app shows another country; the owner's AWS organisation only allows that
+# region), SSH_KEY (private key path, default
 # ~/.ssh/id_ferhatdzroot; only its .pub is sent), OUT (where profiles go,
 # default ~/tunnelbird-openvpn-test, outside the repository).
 set -eu
 
-REGION=${AWS_REGION:-eu-central-1}
+REGION=${AWS_REGION:-eu-north-1}
 NAME=tunnelbird-openvpn-test
 KEY=${SSH_KEY:-$HOME/.ssh/id_ferhatdzroot}
 OUT=${OUT:-$HOME/tunnelbird-openvpn-test}
-TYPE=t4g.nano
+TYPE=t4g.micro
 HERE=$(cd "$(dirname "$0")" && pwd)
 
+# No pager: the AWS CLI would otherwise stop on its JSON answers (`down`).
+export AWS_PAGER=""
 ec2() { aws --region "$REGION" ec2 "$@"; }
 say() { printf '==> %s\n' "$*"; }
 
@@ -40,7 +43,9 @@ public_ip() {
 }
 
 ssh_to() {
-  ssh -i "$KEY" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 "ubuntu@$1" "$@"
+  host=$1
+  shift
+  ssh -i "$KEY" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 "ubuntu@$host" "$@"
 }
 
 up() {
@@ -125,11 +130,11 @@ down() {
     --query 'SecurityGroups[0].GroupId' --output text)
   if [ "$sg" != None ]; then
     say "Deleting security group $sg"
-    ec2 delete-security-group --group-id "$sg"
+    ec2 delete-security-group --group-id "$sg" >/dev/null
   fi
   if ec2 describe-key-pairs --key-names "$NAME" >/dev/null 2>&1; then
     say "Deleting key pair $NAME (AWS copy of the public key only)"
-    ec2 delete-key-pair --key-name "$NAME"
+    ec2 delete-key-pair --key-name "$NAME" >/dev/null
   fi
   echo "Nothing left on AWS. Local profiles stay in $OUT (delete them when done)."
 }
