@@ -1,0 +1,18 @@
+[package]
+name = "tunnelbird-core"
+version = "0.1.0"
+edition = "2024"
+description = "Tunnelbird's shared logic: tunnel file parsers, providers, trusted networks, versions"
+license = "GPL-3.0-or-later"
+authors = ["Ferhat Saidoun"]
+publish = false
+
+[features]
+default = ["gettext-system"]
+# Translations through the system's gettext (Linux). Builds for other systems
+# turn it off and let gettext-rs build its own.
+gettext-system = ["gettext-rs/gettext-system"]
+
+[dependencies]
+base64 = "0.23.1"
+gettext-rs = "0.8.0"

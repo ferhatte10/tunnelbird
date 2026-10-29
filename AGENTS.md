@@ -12,8 +12,14 @@ NetworkManager over D-Bus and never runs as root. It does not manage servers.
 
 ## Map
 
-- `src/config.rs` — lenient `.conf` parser (pure, unit-tested: `cargo test`).
-- `src/provider.rs` — provider detection table; add providers there, with a test.
+- `crates/core/` — `tunnelbird-core`, logic shared with future Windows/macOS
+  apps: no GTK, no D-Bus, no file system, everything unit-tested.
+  - `config.rs` — lenient `.conf` parser; `ovpn.rs` — `.ovpn` parser/writer;
+    `profile.rs` picks the parser from the file's content.
+  - `provider.rs` — provider detection table; add providers there, with a test.
+  - `trust.rs`, `health.rs`, `version.rs` — trusted networks, server health,
+    versions.
+- `src/openvpn.rs` — NetworkManager's OpenVPN settings and certificate files.
 - `src/nm.rs` — D-Bus proxies and `WgConfig` → NetworkManager settings.
 - `src/geo.rs` — public IP/location lookup (libsoup + serde), flags, country names.
 - `src/traffic.rs` — `/sys` counters and the Cairo graph.
@@ -38,6 +44,6 @@ NetworkManager over D-Bus and never runs as root. It does not manage servers.
 
 ```sh
 cargo run
-cargo clippy --all-targets -- -D warnings
-cargo test
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
 ```

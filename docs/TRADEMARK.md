@@ -26,5 +26,8 @@ Requests were sent to `wireguard-trademark-usage [at] zx2c4.com`, as the
   maintainer decision (2026-10-29), relying on fair use to name what a file is.
   If the trademark owner asks for the acknowledgment, add it back to the About
   dialog (`add_legal_section`) and the README.
+- OpenVPN is a registered trademark of OpenVPN Inc. It is shown the same way:
+  only as the type of an imported `.ovpn` file (`ovpn::TUNNEL_TYPE`), never
+  as part of Tunnelbird's name or artwork, never with its logo.
 - Technical identifiers required to talk to the system (NetworkManager's
   `"wireguard"` connection type, code comments) are not branding and stay.

@@ -15,11 +15,12 @@
 
   <description>
     <p>
-      Tunnelbird imports the .conf tunnel file from your VPN provider or your own
-      server, and connects in one click. It works with the network settings of
+      Tunnelbird imports the .conf or .ovpn file from your VPN provider or your
+      own server, and connects in one click. It works with the network settings of
       your system and never needs administrator rights.
     </p>
     <ul>
+      <li>WireGuard® tunnels and OpenVPN profiles</li>
       <li>Preview and edit a tunnel before saving it, with clear errors</li>
       <li>One tunnel at a time: switching disconnects the previous one</li>
       <li>Live traffic graph, public IP address, country and city</li>
@@ -51,6 +52,12 @@
       <caption xml:lang="fr">Vérifiez et modifiez un fichier de tunnel avant de l’importer</caption>
       <image type="source" width="1412" height="1500">https://raw.githubusercontent.com/ferhatte10/tunnelbird/v0.1.0/data/screenshots/en/import.png</image>
       <image type="source" width="1412" height="1500" xml:lang="fr">https://raw.githubusercontent.com/ferhatte10/tunnelbird/v0.1.0/data/screenshots/fr/import.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Import OpenVPN profiles too, certificates included</caption>
+      <caption xml:lang="fr">Importez aussi des profils OpenVPN, certificats compris</caption>
+      <image type="source" width="1412" height="1500">https://raw.githubusercontent.com/ferhatte10/tunnelbird/v0.1.0/data/screenshots/en/import-openvpn.png</image>
+      <image type="source" width="1412" height="1500" xml:lang="fr">https://raw.githubusercontent.com/ferhatte10/tunnelbird/v0.1.0/data/screenshots/fr/import-openvpn.png</image>
     </screenshot>
     <screenshot>
       <caption>Connect automatically on networks you do not trust</caption>
@@ -102,6 +109,7 @@
     <keyword>tunnel</keyword>
     <keyword>network</keyword>
     <keyword>privacy</keyword>
+    <keyword>OpenVPN</keyword>
   </keywords>
 
   <releases>

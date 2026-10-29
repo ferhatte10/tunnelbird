@@ -25,7 +25,8 @@ make check                              # format, lints, tests, desktop file
   title case for titles and buttons, `…` for actions that open a dialog.
 - **Comments explain why**, not what. Module headers (`//!`) say what the
   module is for.
-- Run `cargo fmt` and `cargo clippy` before opening a pull request.
+- Run `make check` (format, lints and tests of both crates, desktop and
+  store files) before opening a pull request.
 
 ## Commits and pull requests
 

@@ -13,8 +13,9 @@
 //!
 //! Keys that only `wg-quick` understands (`PostUp` scripts, `Table`…) are
 //! collected in [`WgConfig::ignored`] so the user is told, not silently ignored.
-//! Files of another kind (OpenVPN, obfuscated variants, ZIP bundles) get a
-//! dedicated message instead of a generic parse error.
+//! Files of another kind (obfuscated variants, ZIP bundles) get a dedicated
+//! message instead of a generic parse error. OpenVPN profiles never get here:
+//! `profile.rs` sends them to `ovpn.rs`.
 
 use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
@@ -88,8 +89,6 @@ pub enum ErrorKind {
     UnknownSection(String),
     KeyOutsideSection,
     NotKeyValue,
-    /// An OpenVPN profile (`.ovpn`): another protocol.
-    OpenVpn,
     /// Obfuscation settings (AmneziaWG `Jc`, `S1`, `H1`…) the system tunnel cannot use.
     Obfuscated(Vec<String>),
     /// A ZIP archive, as some providers ship several configurations at once.
@@ -117,9 +116,6 @@ impl ParseError {
             }
             ErrorKind::KeyOutsideSection => gettext("Setting found outside of a section"),
             ErrorKind::NotKeyValue => gettext("Line is not of the form Key = Value"),
-            ErrorKind::OpenVpn => gettext(
-                "This is an OpenVPN profile. Tunnelbird does not support this protocol yet: ask your provider for a .conf tunnel file instead.",
-            ),
             ErrorKind::Obfuscated(keys) => gettext(
                 "This file uses obfuscation settings ({keys}) that the system cannot apply. Download a standard configuration from your provider.",
             )
@@ -207,12 +203,6 @@ pub fn parse(text: &str) -> Result<WgConfig, ParseError> {
         }
 
         let Some((raw_key, raw_value)) = line.split_once('=') else {
-            if !has_interface && looks_like_openvpn(text) {
-                return Err(ParseError {
-                    line: None,
-                    kind: ErrorKind::OpenVpn,
-                });
-            }
             return Err(err(ErrorKind::NotKeyValue));
         };
         let key = raw_key.trim();
@@ -292,11 +282,7 @@ pub fn parse(text: &str) -> Result<WgConfig, ParseError> {
         return fail(ErrorKind::Obfuscated(obfuscation));
     }
     if !has_interface {
-        return fail(if looks_like_openvpn(text) {
-            ErrorKind::OpenVpn
-        } else {
-            ErrorKind::NoInterface
-        });
+        return fail(ErrorKind::NoInterface);
     }
     if config.interface.private_key.is_empty() {
         return fail(ErrorKind::NoPrivateKey);
@@ -534,17 +520,6 @@ fn check_key(name: &str, value: &str, line: usize) -> Result<String, ParseError>
     }
 }
 
-/// Typical OpenVPN directives, to explain why an `.ovpn` file is refused.
-fn looks_like_openvpn(text: &str) -> bool {
-    text.lines().map(str::trim).any(|line| {
-        line == "client"
-            || line.starts_with("remote ")
-            || line.starts_with("proto ")
-            || line.starts_with("<ca>")
-            || line.starts_with("auth-user-pass")
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -628,10 +603,6 @@ mod tests {
 
     #[test]
     fn clear_errors_for_other_formats() {
-        assert!(matches!(
-            kind("client\ndev tun\nproto udp\nremote vpn.example.com 1194\n<ca>\n</ca>\n"),
-            ErrorKind::OpenVpn
-        ));
         let amnezia = format!(
             "[Interface]\nPrivateKey = {KEY_A}\nJc = 4\nJmin = 40\nH1 = 1\n[Peer]\nPublicKey = {KEY_B}\nEndpoint = x.example.com:51820\n"
         );

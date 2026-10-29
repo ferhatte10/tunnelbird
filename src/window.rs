@@ -8,7 +8,7 @@
 //! [`Ui`] lives as long as the application, so closures simply hold an `Rc` to it.
 
 use std::cell::{Cell, RefCell};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
@@ -18,18 +18,21 @@ use futures_util::StreamExt;
 use gettextrs::gettext;
 use gtk::{gdk, gio, glib};
 
-use crate::config::{self, WgConfig};
+use crate::config;
 use crate::demo;
 use crate::editor;
 use crate::geo::{self, Location};
 use crate::health::{Health, HealthWatch};
 use crate::nm::{self, Nm, Tunnel, TunnelState};
+use crate::openvpn;
+use crate::profile::{Kind, Profile};
 use crate::settings::Settings;
 use crate::share;
 use crate::traffic::{self, Sample, TrafficGraph};
 use crate::tray::{Tray, TrayAction, TrayModel, TrayTunnel};
 use crate::trust::Decision;
 use crate::update::{self, FlatpakEvent, FlatpakMonitor, Install, Manager};
+use crate::version;
 use crate::{APP_ID, LOG_DOMAIN};
 
 /// Groups bursts of NetworkManager signals into a single refresh.
@@ -482,11 +485,21 @@ impl Ui {
 
         let window = self.window.clone();
         glib::spawn_future_local(async move {
-            let config = demo::config(false);
-            editor::run(&window, editor::Mode::Import, "home-server", &config, None).await;
+            let profile = Profile::WireGuard(demo::config(false));
+            editor::run(&window, editor::Mode::Import, "home-server", &profile, None).await;
         });
         settle(1200).await;
         shot("import").await;
+        close_dialog();
+        settle(800).await;
+
+        let window = self.window.clone();
+        glib::spawn_future_local(async move {
+            let profile = Profile::OpenVpn(Box::new(demo::ovpn_config()));
+            editor::run(&window, editor::Mode::Import, "office", &profile, None).await;
+        });
+        settle(1200).await;
+        shot("import-openvpn").await;
         close_dialog();
         settle(800).await;
 
@@ -786,14 +799,14 @@ impl Ui {
         if previous == VERSION {
             return;
         }
-        if !update::is_newer(&settings.update_available, VERSION) {
+        if !version::is_newer(&settings.update_available, VERSION) {
             settings.update_available.clear();
         }
         if let Err(err) = settings.save() {
             glib::g_warning!(LOG_DOMAIN, "Cannot save settings: {err}");
         }
         // Nothing to announce on the very first start or after a downgrade.
-        if previous.is_empty() || !update::is_newer(VERSION, &previous) {
+        if previous.is_empty() || !version::is_newer(VERSION, &previous) {
             return;
         }
         self.toasts.add_toast(
@@ -810,7 +823,7 @@ impl Ui {
     fn schedule_update_checks(self: &Rc<Self>) {
         // A version found before this start is still newer: no need to ask again.
         let known = Settings::load().update_available;
-        if update::is_newer(&known, VERSION) {
+        if version::is_newer(&known, VERSION) {
             self.show_update(UpdateNotice::Available(Some(known)));
         }
         let ui = self.clone();
@@ -825,7 +838,7 @@ impl Ui {
 
     fn check_for_update(self: &Rc<Self>) {
         let settings = Settings::load();
-        if !settings.check_updates || !update::check_due(settings.last_update_check, unix_now()) {
+        if !settings.check_updates || !version::check_due(settings.last_update_check, unix_now()) {
             return;
         }
         let ui = self.clone();
@@ -835,7 +848,7 @@ impl Ui {
                 // Offline or the site is down: normal, tried again within the hour.
                 Err(err) => return glib::g_info!(LOG_DOMAIN, "Cannot check for updates: {err}"),
             };
-            let newer = update::is_newer(&latest.version, VERSION);
+            let newer = version::is_newer(&latest.version, VERSION);
             let mut settings = Settings::load();
             settings.last_update_check = unix_now();
             settings.update_available = if newer {
@@ -983,31 +996,30 @@ impl Ui {
                 "The new version comes with your system updates: open Software, or your update manager, and install the available updates. From a terminal:",
             )),
         );
-        let label = gtk::Label::builder()
-            .label(command)
-            .css_classes(["monospace"])
-            .wrap(true)
-            .hexpand(true)
-            .xalign(0.0)
-            .build();
-        let copy = gtk::Button::builder()
-            .icon_name("edit-copy-symbolic")
-            .tooltip_text(gettext("Copy"))
-            .valign(gtk::Align::Center)
-            .css_classes(["flat"])
-            .build();
-        clickable(&copy);
-        copy.connect_clicked(move |button| {
-            button.clipboard().set_text(command);
-            button.set_icon_name("object-select-symbolic");
-        });
-        let row = gtk::Box::builder()
-            .spacing(6)
-            .css_classes(["card", "command"])
-            .build();
-        row.append(&label);
-        row.append(&copy);
-        dialog.set_extra_child(Some(&row));
+        dialog.set_extra_child(Some(&command_box(command)));
+        dialog.add_response("close", &gettext("_Close"));
+        dialog.present(Some(&self.window));
+    }
+
+    /// NetworkManager has no OpenVPN plugin: say how to install it on this
+    /// system (the package cannot come with a Flatpak or a Snap).
+    fn explain_missing_plugin(&self) {
+        let command = openvpn::plugin_install_command(&openvpn::host_os_release());
+        let body = match command {
+            Some(_) => gettext(
+                "Tunnelbird connects OpenVPN profiles through the network settings of your system, which need their OpenVPN support. Install it, then connect again:",
+            ),
+            None => gettext(
+                "Tunnelbird connects OpenVPN profiles through the network settings of your system, which need their OpenVPN support. Install your distribution's NetworkManager OpenVPN package (often called networkmanager-openvpn), then connect again.",
+            ),
+        };
+        let dialog = adw::AlertDialog::new(
+            Some(&gettext("OpenVPN Support Is Not Installed")),
+            Some(&body),
+        );
+        if let Some(command) = command {
+            dialog.set_extra_child(Some(&command_box(command)));
+        }
         dialog.add_response("close", &gettext("_Close"));
         dialog.present(Some(&self.window));
     }
@@ -1222,9 +1234,11 @@ impl Ui {
         let item = gio::MenuItem::new(Some(&gettext("Export as File…")), None);
         item.set_action_and_target_value(Some("win.export-tunnel"), Some(&uuid));
         menu.append_item(&item);
-        let item = gio::MenuItem::new(Some(&gettext("Show QR Code")), None);
-        item.set_action_and_target_value(Some("win.show-qr"), Some(&uuid));
-        menu.append_item(&item);
+        if tunnel.kind.has_qr_code() {
+            let item = gio::MenuItem::new(Some(&gettext("Show QR Code")), None);
+            item.set_action_and_target_value(Some("win.show-qr"), Some(&uuid));
+            menu.append_item(&item);
+        }
         let share = gtk::MenuButton::builder()
             .icon_name("send-to-symbolic")
             .tooltip_text(gettext("Share"))
@@ -1333,6 +1347,13 @@ impl Ui {
             ui.busy.borrow_mut().remove(&tunnel.uuid);
             if let Err(err) = result {
                 ui.expecting.borrow_mut().remove(&tunnel.uuid);
+                let message = nm::error_message(&err);
+                if connect && tunnel.kind == Kind::OpenVpn && openvpn::is_plugin_missing(&message) {
+                    glib::g_warning!(LOG_DOMAIN, "OpenVPN plugin missing: {message}");
+                    ui.explain_missing_plugin();
+                    ui.refresh().await;
+                    return;
+                }
                 let context = if connect {
                     gettext("Cannot connect “{name}”")
                 } else {
@@ -1362,15 +1383,15 @@ impl Ui {
         let ui = self.clone();
         glib::spawn_future_local(async move {
             let context = gettext("Cannot share “{name}”").replace("{name}", &tunnel.name);
-            let config = match nm.read_config(&tunnel).await {
-                Ok(config) => config,
+            let profile = match nm.read_profile(&tunnel).await {
+                Ok(profile) => profile,
                 Err(err) => return ui.report_error(&context, &nm::error_message(&err)),
             };
-            if qr {
-                return share::show_qr(&ui.window, &tunnel.name, &config);
+            if let (true, Profile::WireGuard(config)) = (qr, &profile) {
+                return share::show_qr(&ui.window, &tunnel.name, config);
             }
             let window = ui.window.clone().upcast::<gtk::Window>();
-            match share::export_file(&window, &tunnel.name, &config).await {
+            match share::export_file(&window, &tunnel.name, &profile).await {
                 Ok(Some(path)) => ui.toast(&gettext("Saved to {path}").replace("{path}", &path)),
                 Ok(None) => {}
                 Err(message) => ui.report_error(&context, &message),
@@ -1385,8 +1406,8 @@ impl Ui {
         let ui = self.clone();
         glib::spawn_future_local(async move {
             let context = gettext("Cannot edit “{name}”").replace("{name}", &tunnel.name);
-            let current = match nm.read_config(&tunnel).await {
-                Ok(config) => config,
+            let current = match nm.read_profile(&tunnel).await {
+                Ok(profile) => profile,
                 Err(err) => return ui.report_error(&context, &nm::error_message(&err)),
             };
             let Some(edited) = editor::run(
@@ -1400,7 +1421,7 @@ impl Ui {
             else {
                 return;
             };
-            if let Err(err) = nm.update(&tunnel, &edited.config, &edited.name).await {
+            if let Err(err) = nm.update(&tunnel, &edited.profile, &edited.name).await {
                 return ui.report_error(&context, &nm::error_message(&err));
             }
             glib::g_info!(LOG_DOMAIN, "Tunnel “{}” updated", edited.name);
@@ -1474,6 +1495,15 @@ impl Ui {
             glib::spawn_future_local(async move {
                 match nm.delete(&tunnel).await {
                     Ok(()) => {
+                        if tunnel.kind == Kind::OpenVpn
+                            && let Err(err) = openvpn::remove_files(&tunnel.uuid)
+                        {
+                            glib::g_warning!(
+                                LOG_DOMAIN,
+                                "Cannot remove the certificates of “{}”: {err}",
+                                tunnel.name
+                            );
+                        }
                         ui.toast(&gettext("“{name}” deleted").replace("{name}", &tunnel.name))
                     }
                     Err(err) => ui.report_error(
@@ -1491,6 +1521,11 @@ impl Ui {
         let filter = gtk::FileFilter::new();
         filter.set_name(Some(&gettext("VPN Configuration")));
         filter.add_pattern("*.conf");
+        filter.add_pattern("*.ovpn");
+        // Certificates an OpenVPN profile refers to, selected with it.
+        for pattern in ["*.crt", "*.pem", "*.key"] {
+            filter.add_pattern(pattern);
+        }
         let filters = gio::ListStore::new::<gtk::FileFilter>();
         filters.append(&filter);
         let dialog = gtk::FileDialog::builder()
@@ -1518,28 +1553,64 @@ impl Ui {
     pub fn import_files(self: &Rc<Self>, files: Vec<gio::File>) {
         let ui = self.clone();
         glib::spawn_future_local(async move {
+            // Everything is read first: certificate files selected together
+            // with an OpenVPN profile belong to it, they are not tunnels.
+            let mut loaded = Vec::new();
             for file in files {
-                ui.import_file(&file).await;
+                let label = file_label(&file);
+                match file.load_contents_future().await {
+                    Ok((bytes, _etag)) => loaded.push((file, label, bytes)),
+                    Err(err) => ui.report_error(
+                        &gettext("Cannot import “{file}”").replace("{file}", &label),
+                        &err.to_string(),
+                    ),
+                }
+            }
+            let parsed: Vec<_> = loaded
+                .iter()
+                .map(|(_, _, bytes)| crate::profile::parse_bytes(bytes))
+                .collect();
+            let referenced: HashSet<String> = parsed
+                .iter()
+                .filter_map(|result| match result {
+                    Ok(Profile::OpenVpn(config)) => Some(config.file_names()),
+                    _ => None,
+                })
+                .flatten()
+                .collect();
+            let selected: HashMap<String, String> = loaded
+                .iter()
+                .map(|(_, label, bytes)| {
+                    (label.clone(), String::from_utf8_lossy(bytes).into_owned())
+                })
+                .collect();
+            for ((file, label, _), result) in loaded.iter().zip(parsed) {
+                let context = gettext("Cannot import “{file}”").replace("{file}", label);
+                match result {
+                    Ok(profile) => ui.import_profile(file, label, profile, &selected).await,
+                    Err(_) if referenced.contains(label) => {}
+                    Err(message) => ui.report_error(&context, &message),
+                }
             }
             ui.refresh().await;
         });
     }
 
-    async fn import_file(&self, file: &gio::File) {
-        let label = file
-            .basename()
-            .map(|path| path.display().to_string())
-            .unwrap_or_else(|| file.uri().to_string());
-        let context = gettext("Cannot import “{file}”").replace("{file}", &label);
-
-        let bytes = match file.load_contents_future().await {
-            Ok((bytes, _etag)) => bytes,
-            Err(err) => return self.report_error(&context, &err.to_string()),
-        };
-        let config = match config::parse_bytes(&bytes) {
-            Ok(config) => config,
-            Err(err) => return self.report_error(&context, &err.to_string()),
-        };
+    async fn import_profile(
+        &self,
+        file: &gio::File,
+        label: &str,
+        mut profile: Profile,
+        selected: &HashMap<String, String>,
+    ) {
+        let context = gettext("Cannot import “{file}”").replace("{file}", label);
+        if let Profile::OpenVpn(config) = &mut profile {
+            let folder = file.parent().and_then(|dir| dir.path());
+            let read = |name: &str| read_companion(name, selected, folder.as_deref());
+            if let Err(err) = config.resolve_files(read).and_then(|()| config.check()) {
+                return self.report_error(&context, &err.to_string());
+            }
+        }
         let Some(nm) = self.nm.borrow().clone() else {
             return self.report_error(&context, &gettext("NetworkManager is not available"));
         };
@@ -1549,16 +1620,22 @@ impl Ui {
             .and_then(|path| path.file_stem().map(|s| s.to_string_lossy().into_owned()))
             .unwrap_or_else(|| "vpn".to_owned());
         // Nothing is saved before the user has seen and confirmed the tunnel.
-        let provider = detect_provider(&config, &stem);
-        let Some(edited) =
-            editor::run(&self.window, editor::Mode::Import, &stem, &config, provider).await
+        let provider = detect_provider(&profile, &stem);
+        let Some(edited) = editor::run(
+            &self.window,
+            editor::Mode::Import,
+            &stem,
+            &profile,
+            provider,
+        )
+        .await
         else {
             glib::g_info!(LOG_DOMAIN, "Import of “{label}” cancelled");
             return;
         };
         match nm
             .import(
-                &edited.config,
+                &edited.profile,
                 &edited.name,
                 &config::interface_name(&edited.name),
             )
@@ -1567,14 +1644,17 @@ impl Ui {
             Ok(name) => {
                 glib::g_info!(LOG_DOMAIN, "Imported “{label}” as “{name}”");
                 let mut message = gettext("“{name}” imported").replace("{name}", &name);
-                if !config.ignored.is_empty() {
+                if !profile.ignored().is_empty() {
                     message.push_str(" · ");
                     message.push_str(
                         &gettext("ignored settings: {keys}")
-                            .replace("{keys}", &config.ignored.join(", ")),
+                            .replace("{keys}", &profile.ignored().join(", ")),
                     );
                 }
                 self.toast(&message);
+                if profile.kind() == Kind::OpenVpn && openvpn::plugin_installed() == Some(false) {
+                    self.explain_missing_plugin();
+                }
             }
             Err(err) => self.report_error(&context, &nm::error_message(&err)),
         }
@@ -1863,7 +1943,7 @@ impl LiveCard {
         }
         self.name.set_label(&tunnel.name);
         let server = join_dot([
-            Some(config::TUNNEL_TYPE.to_owned()),
+            Some(tunnel.kind.label().to_owned()),
             tunnel.provider.map(str::to_owned),
             tunnel.endpoint.clone(),
         ]);
@@ -1967,18 +2047,78 @@ impl LiveCard {
 }
 
 /// Provider of a configuration about to be imported, from its server, DNS and file name.
-fn detect_provider(config: &WgConfig, name: &str) -> Option<&'static str> {
-    let dns: Vec<String> = config
-        .interface
-        .dns_servers
-        .iter()
-        .map(ToString::to_string)
-        .collect();
+fn detect_provider(profile: &Profile, name: &str) -> Option<&'static str> {
+    let (endpoint, dns) = match profile {
+        Profile::WireGuard(config) => (
+            config.peers.first().and_then(|p| p.endpoint.clone()),
+            config
+                .interface
+                .dns_servers
+                .iter()
+                .map(ToString::to_string)
+                .collect(),
+        ),
+        Profile::OpenVpn(config) => (config.endpoint(), Vec::new()),
+    };
     crate::provider::detect(&crate::provider::Hints {
         name,
-        endpoint: config.peers.first().and_then(|p| p.endpoint.as_deref()),
+        endpoint: endpoint.as_deref(),
         dns: &dns,
     })
+}
+
+fn file_label(file: &gio::File) -> String {
+    file.basename()
+        .map(|path| path.display().to_string())
+        .unwrap_or_else(|| file.uri().to_string())
+}
+
+/// A certificate or key an OpenVPN profile refers to: among the files
+/// selected with it, else next to it (not visible from a Flatpak sandbox).
+fn read_companion(
+    name: &str,
+    selected: &HashMap<String, String>,
+    folder: Option<&std::path::Path>,
+) -> Option<String> {
+    let path = std::path::Path::new(name);
+    let base = path.file_name()?.to_string_lossy();
+    if let Some(text) = selected.get(base.as_ref()) {
+        return Some(text.clone());
+    }
+    let full = match folder {
+        Some(folder) if path.is_relative() => folder.join(path),
+        _ => path.to_path_buf(),
+    };
+    std::fs::read_to_string(full).ok()
+}
+
+/// A shell command with a copy button, for dialogs that explain one.
+fn command_box(command: &'static str) -> gtk::Box {
+    let label = gtk::Label::builder()
+        .label(command)
+        .css_classes(["monospace"])
+        .wrap(true)
+        .hexpand(true)
+        .xalign(0.0)
+        .build();
+    let copy = gtk::Button::builder()
+        .icon_name("edit-copy-symbolic")
+        .tooltip_text(gettext("Copy"))
+        .valign(gtk::Align::Center)
+        .css_classes(["flat"])
+        .build();
+    clickable(&copy);
+    copy.connect_clicked(move |button| {
+        button.clipboard().set_text(command);
+        button.set_icon_name("object-select-symbolic");
+    });
+    let row = gtk::Box::builder()
+        .spacing(6)
+        .css_classes(["card", "command"])
+        .build();
+    row.append(&label);
+    row.append(&copy);
+    row
 }
 
 /// Joins the present parts with " · ".

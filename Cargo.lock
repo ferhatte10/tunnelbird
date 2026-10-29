@@ -1124,8 +1124,17 @@ dependencies = [
  "serde",
  "serde_json",
  "soup3",
+ "tunnelbird-core",
  "uuid",
  "zbus",
+]
+
+[[package]]
+name = "tunnelbird-core"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "gettext-rs",
 ]
 
 [[package]]

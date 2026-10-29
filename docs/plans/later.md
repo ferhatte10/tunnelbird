@@ -1,11 +1,16 @@
 # Plan: OpenVPN, community translations, macOS and Windows
 
-Status: **thinking ahead**, nothing started. Each part ends with what the
-owner has to decide. Order of value: translations (cheap, opens the project
-to contributors), then OpenVPN (most VPN providers still hand out `.ovpn`
-files), then other systems (large).
+Status: OpenVPN **done** (2026-10-29, `src/ovpn.rs`, see
+`docs/ARCHITECTURE.md`; still to test on a real server); the rest is thinking
+ahead. Order decided by the owner: OpenVPN, then the shared core, then Windows,
+then macOS. Translations through Weblate once the repository is public.
 
-## 1. OpenVPN profiles
+## 1. OpenVPN profiles (done)
+
+What was built follows this section, with three changes: certificates live in
+`~/.cert/nm-openvpn/` (SELinux on Fedora), the password may also be typed in the
+editor, and OpenConnect is left for later. Packages list the plugin as a
+recommended dependency (`docs/plans/ci-and-release.md`).
 
 ### How
 
@@ -82,7 +87,7 @@ Today's app is Linux-only by design: GTK/libadwaita for the window and
 NetworkManager for the tunnels. Other systems need another tunnel backend and,
 to feel native, another interface. What can be shared is the logic.
 
-### Step 1: a shared core (useful even for Linux)
+### Step 1: a shared core (done, `crates/core`)
 
 Move the pure parts into a `tunnelbird-core` crate (Cargo workspace):
 `config.rs` (parser), `provider.rs`, `trust.rs` (decision only), `health.rs`,
@@ -96,35 +101,66 @@ unit-tested. The Linux app becomes one client of that core.
   Creating adapters needs administrator rights, so the design is the classic
   one: a small Windows **service** (runs as SYSTEM, written in Rust) owns the
   tunnels; the interface runs as the user and talks to it over a named pipe.
-- **Interface**: Tauri 2 with a Svelte front end (the owner's stack), same
-  look as the website, Rust backend calling the core. One interface codebase
-  for Windows and macOS.
-- **Distribution**: MSIX through the Microsoft Store and `winget`; code signing
-  is needed or SmartScreen warns on every install (Azure Trusted Signing, about
-  10 $/month, is the cheapest).
+- **Interface**: native **WinUI 3** (Windows App SDK, C#): Fluent style, Mica,
+  icon in the notification area, like Windows 11's own apps. It only shows
+  things and sends clicks: all the logic is in the Rust core and the service,
+  over the named pipe (a small documented JSON protocol, the same as on
+  macOS). Built with the free .NET SDK.
+- **Distribution**: owner's decision, **no store**: an installer downloaded
+  from the website (an `.msi` installing the app and the service), plus `winget`
+  later if wanted. The drivers are already signed by their authors, so only
+  Tunnelbird's own files would be unsigned: Windows SmartScreen then shows
+  “Windows protected your PC” → “More info” → “Run anyway” on each new
+  version, and antivirus false alarms are more likely. Free way out for
+  open-source projects: the SignPath Foundation signs releases at no cost
+  (application once the repository is public).
 - Check licences before shipping: WireGuardNT and Wintun have their own terms
   for redistribution. The trademark rule stays: the type “WireGuard®” as a
   label, never the logo.
 
 ### Step 3: macOS
 
-- **Tunnels**: Apple only allows VPNs through the NetworkExtension framework: a
-  `NEPacketTunnelProvider` extension in Swift, running a userspace WireGuard
-  (BoringTun in Rust, or WireGuardKit). Requires an Apple Developer account
-  (99 $/year), signing and notarization; the App Store is optional (a notarized
-  `.dmg` plus a Homebrew cask works).
-- **Interface**: the same Tauri + Svelte app, plus the Swift extension; or a
-  native SwiftUI app calling the core through UniFFI if the Tauri version feels
-  out of place on macOS.
-- OpenVPN on macOS has no system driver: it would need its own userspace
-  implementation inside the extension; WireGuard first.
+- **Distribution**: owner's decision, **no store and no paid Apple account**:
+  a `.dmg` downloaded from the website.
+- **Consequence for the tunnels**: Apple's VPN framework (NetworkExtension)
+  needs an entitlement that only a paid developer account can grant, even
+  outside the App Store. Without it, Tunnelbird works like `wg-quick` from
+  Homebrew or Tunnelblick: a small **helper running as root** (launchd daemon,
+  Rust, BoringTun for WireGuard and the `openvpn` program for OpenVPN) creates
+  the `utun` interface, sets routes and DNS; the app talks to it over a local
+  socket. The helper is installed once, with the administrator password.
+- **Consequence for the first launch**: an unsigned app is blocked by
+  Gatekeeper. Since macOS 15 the user opens System Settings › Privacy &
+  Security › “Open Anyway” once per version (the website shows it with
+  screenshots). If this proves too rough, a paid account can be added later
+  without changing the design much.
+- **Interface**: native **SwiftUI**, as a menu bar app (`MenuBarExtra`) with a
+  main window, like most Mac VPN apps. It talks to the root helper over the
+  local socket with the same protocol as Windows. Built with Xcode (free).
+- OpenVPN runs through the `openvpn` program started by the helper; WireGuard
+  first.
 
-Effort: weeks for each system, plus yearly costs (Apple account, Windows
-signing).
+### How the owner works on these systems
 
-**Decisions**: go ahead with the shared core now (cheap, no cost)? Tauri +
-Svelte for the other systems, or native toolkits? Budget for the Apple and
-signing accounts?
+Everything is written on the Linux PC. The Mac and the Windows PC are build
+and test machines driven remotely: `make mac` / `make windows` send the code
+over SSH, build and launch the app there; the screens are viewed with
+Remmina (macOS screen sharing, Windows remote desktop). Screenshots for the
+website are taken there by script, like `make screenshots` on Linux.
+Swift and WinUI cannot be built on Linux (Apple's and Microsoft's toolkits only
+exist on their systems), hence the remote machines. Never a self-hosted CI
+runner on these machines once the repository is public: anyone's pull request
+could run code on them; GitHub's hosted Mac and Windows runners (free for
+public repositories) build the releases.
+
+Effort: weeks for each system; no yearly cost with the choices above.
+
+**Decided**: no store and no paid account (the project spends nothing),
+installers from the website only; native interfaces (WinUI 3, SwiftUI) on top
+of the shared Rust core; the owner has a Windows PC and a Mac to test once the
+app works. Tauri + Svelte stays the fallback if the remote round trips become
+a burden. The shared core exists (`crates/core`). **Still open**: apply to the SignPath
+Foundation once public.
 
 ## Also worth considering later
 

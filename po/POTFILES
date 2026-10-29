@@ -1,4 +1,5 @@
-src/config.rs
+crates/core/src/config.rs
+crates/core/src/ovpn.rs
 src/editor.rs
 src/main.rs
 src/preferences.rs

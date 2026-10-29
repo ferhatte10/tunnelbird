@@ -25,9 +25,9 @@ run:
 	$(CARGO) run
 
 check:
-	$(CARGO) fmt --check
-	$(CARGO) clippy --all-targets -- -D warnings
-	$(CARGO) test
+	$(CARGO) fmt --all --check
+	$(CARGO) clippy --workspace --all-targets -- -D warnings
+	$(CARGO) test --workspace
 	desktop-file-validate data/$(APP_ID).desktop
 	appstreamcli validate --no-net data/$(APP_ID).metainfo.xml
 

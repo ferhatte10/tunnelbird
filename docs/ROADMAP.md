@@ -90,6 +90,5 @@ binary: it tells the user what will happen and sends them to the right place.
 
 ## Later
 
-- OpenVPN profiles (through NetworkManager's OpenVPN plugin).
 - Other languages through Weblate.
 - macOS and Windows clients on top of a shared Rust core.

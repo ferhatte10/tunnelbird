@@ -13,7 +13,7 @@ manifest builds the tagged release from GitHub, as Flathub requires.
   Flathub's quality guidelines:
   - summary of 32 characters, no app name, no “app/client”, no full stop
     (English and French);
-  - six screenshots per language, GNOME's default look, window with its title
+  - seven screenshots per language, GNOME's default look, window with its title
     bar, rounded corners and shadow, 640×700 window at 2x, one-sentence
     captions; made with `make screenshots` (demo mode, made-up addresses);
   - SVG icon, brand colours for light and dark, OARS rating, release notes,

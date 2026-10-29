@@ -1,18 +1,22 @@
 # Tunnelbird
 
 A lightweight, modern VPN client for the Linux desktop.
-Import the `.conf` file from your VPN provider or your own server, then connect
-in one click.
+Import the `.conf` (WireGuard®) or `.ovpn` (OpenVPN) file from your VPN
+provider or your own server, then connect in one click.
 
 > Tunnelbird is a **client only**: it does not create or manage VPN servers.
 
 ## Features
 
-- Import `.conf` files (button, drag and drop, or `tunnelbird file.conf`), as
-  written by VPN providers, routers and scripts: lenient on formatting, precise
-  errors with line numbers, clear messages for OpenVPN profiles, obfuscated
-  variants and ZIP bundles
-- Shows the tunnel type (WireGuard® configuration files) and recognises well-known providers (Mullvad, Proton VPN, Surfshark, NordVPN,
+- Import `.conf` and `.ovpn` files (button, drag and drop, or
+  `tunnelbird file.conf`), recognised by their content, as written by VPN
+  providers, routers and scripts: lenient on formatting, precise errors with
+  line numbers, clear messages for obfuscated variants and ZIP bundles
+- OpenVPN profiles with inline certificates or separate certificate files
+  (select them with the profile), user name and password kept by NetworkManager
+  or by the desktop keyring; if the system lacks NetworkManager's OpenVPN
+  plugin, Tunnelbird shows the command that installs it for your distribution
+- Shows the tunnel type (WireGuard® or OpenVPN) and recognises well-known providers (Mullvad, Proton VPN, Surfshark, NordVPN,
   Cloudflare WARP, IVPN, AzireVPN, AirVPN, Windscribe, PIA) and shows their name
 - Connect and disconnect with a switch; only one tunnel at a time (connecting
   another one disconnects the current one)
@@ -21,7 +25,7 @@ in one click.
 - Warns when the server stops answering while the system still says
   “connected”, and when a tunnel drops on its own
 - Preview and edit before importing; edit existing tunnels; export as a `.conf`
-  file or as a QR code to scan with a phone
+  or `.ovpn` file, or a WireGuard® tunnel as a QR code to scan with a phone
 - Top bar icon and menu: switch VPN, live traffic with a mini graph, location,
   open the window or quit. Closing the window keeps Tunnelbird running there
 - Automatic connection on untrusted networks (café or hotel Wi-Fi), never on
@@ -55,6 +59,10 @@ leaves your computer. Partial tunnels are not looked up.
 - Linux 5.6 or later
 - NetworkManager 1.16 or later (installed by default on Ubuntu, Fedora, Debian desktop, Mint, Manjaro…)
 - GTK 4.14, libadwaita 1.5 and libsoup 3 or later
+- For OpenVPN profiles: NetworkManager's OpenVPN plugin
+  (`network-manager-openvpn-gnome` on Ubuntu/Debian,
+  `NetworkManager-openvpn-gnome` on Fedora, installed by default on their
+  desktops; `networkmanager-openvpn` on Arch)
 - `iso-codes` (optional) for country names in your language
 - For the top bar icon on GNOME: the AppIndicator extension (enabled by default
   on Ubuntu). KDE Plasma supports it natively. Without it, closing the window quits

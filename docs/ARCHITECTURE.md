@@ -1,14 +1,22 @@
 # Architecture
 
-Tunnelbird is a single Rust binary with four modules. It holds no privilege and
+Tunnelbird is a Cargo workspace with two crates. It holds no privilege and
 stores no secret itself.
 
+- `crates/core` (`tunnelbird-core`): the logic every system shares, pure and
+  unit-tested: the `.conf` and `.ovpn` parsers, providers, trusted networks,
+  server health, versions. No GTK, no D-Bus, no file system: the Windows and
+  macOS apps planned in `docs/plans/later.md` will use it as it is.
+- the root crate (`tunnelbird`): the Linux app, GTK/libadwaita and
+  NetworkManager. `main.rs` imports the core modules at the crate root, so
+  `crate::config` and the like read the same in both crates.
+
 ```
- .conf file ──► config.rs ──► nm.rs ──D-Bus──► NetworkManager ──► kernel WireGuard
-                 (parse)     (convert,           (polkit,          (wg interface,
-                              activate)           routes, DNS)      encryption)
-                                │
- window.rs ◄── signals ─────────┘
+ .conf / .ovpn ──► profile.rs ──► nm.rs ──D-Bus──► NetworkManager ──► kernel WireGuard
+                  (config.rs,     (convert,          (polkit,           or OpenVPN plugin
+                   ovpn.rs)        activate)          routes, DNS)       (tunnel interface)
+                                    │
+ window.rs ◄── signals ─────────────┘
  (GTK UI)  ◄── traffic.rs ◄── /sys/class/net/<iface>/statistics
 ```
 
@@ -17,19 +25,23 @@ stores no secret itself.
 | File | Role | Depends on |
 |---|---|---|
 | `src/main.rs` | Entry point: gettext, app actions, panic logger | everything |
-| `src/config.rs` | Parses `.conf` files into `WgConfig`, leniently (see below). Pure logic, unit-tested | — |
-| `src/provider.rs` | Recognises well-known VPN providers from server, DNS and profile name. Unit-tested | — |
-| `src/nm.rs` | NetworkManager D-Bus client: list, import, activate, deactivate, delete, watch changes | `config` |
+| `crates/core/src/config.rs` | Parses `.conf` files into `WgConfig`, leniently (see below). Pure logic, unit-tested | — |
+| `crates/core/src/provider.rs` | Recognises well-known VPN providers from server, DNS and profile name. Unit-tested | — |
+| `crates/core/src/profile.rs` | A tunnel file of either kind, recognised by its content | `config`, `ovpn` |
+| `crates/core/src/ovpn.rs` | OpenVPN `.ovpn` parser and writer. Unit-tested | — |
+| `src/openvpn.rs` | NetworkManager's OpenVPN plugin settings, certificate files, plugin detection and install command. Unit-tested | `ovpn` |
+| `src/nm.rs` | NetworkManager D-Bus client: list, import, activate, deactivate, delete, watch changes (WireGuard and OpenVPN) | `config`, `ovpn`, `profile` |
 | `src/geo.rs` | Public IP and location from ifconfig.co (libsoup), flag emoji, localized country names from `iso-codes` | — |
 | `src/settings.rs` | Preferences file (`~/.config/tunnelbird/settings.ini`): style, language, background mode, trusted networks, update checks | — |
 | `src/preferences.rs` | Preferences dialog; restarts the app to apply a new language | `settings` |
 | `src/tray.rs` | Top bar icon (`org.kde.StatusNotifierItem`) and its menu (`com.canonical.dbusmenu`) on the session bus | — |
-| `src/health.rs` | Tells a working tunnel from a silent server, from packet counters. Unit-tested | — |
+| `crates/core/src/health.rs` | Tells a working tunnel from a silent server, from packet counters. Unit-tested | — |
 | `src/editor.rs` | Preview before import and editing; validates through `config::parse` | `config`, `share` |
 | `src/share.rs` | Export as `.conf` (mode 0600) and QR code (`qrcode` crate, drawn with Cairo) | `config` |
-| `src/trust.rs` | Trusted networks rule: when joining which network connects which tunnel. Unit-tested | — |
+| `crates/core/src/trust.rs` | Trusted networks rule: when joining which network connects which tunnel. Unit-tested | — |
 | `src/traffic.rs` | Reads interface byte counters, draws the live graph with Cairo | — |
-| `src/update.rs` | How the app was installed, new version checks (`latest.json`, Flatpak portal), restart after an update, release notes. Unit-tested | `geo`, `portal` |
+| `crates/core/src/version.rs` | Version comparison, daily check timing, release notes from the metainfo. Unit-tested | — |
+| `src/update.rs` | How the app was installed, new version checks (`latest.json`, Flatpak portal), restart after an update. Unit-tested | `geo`, `portal`, `version` |
 | `src/demo.rs` | Demo mode (`TUNNELBIRD_DEMO`): made-up tunnels and traffic for store screenshots, isolated settings | `config`, `settings` |
 | `src/window.rs` | Builds the window, reacts to user actions and NetworkManager signals | all of the above |
 
@@ -49,10 +61,27 @@ the same in `config.rs` keeps Tunnelbird working inside a Flatpak sandbox, where
 Windows line endings, `;` comments, key spelling (`allowed_ips`), quoted values,
 space-separated lists, host bits in `AllowedIPs`, IPv6 endpoints in brackets.
 `config.rs` accepts all of these and stays strict on keys, addresses and the
-endpoint. Files of another kind (OpenVPN, AmneziaWG obfuscation, ZIP bundles)
-get a dedicated message. Long file names become valid, distinct interface
+endpoint. Files of another kind (AmneziaWG obfuscation, ZIP bundles) get a
+dedicated message. Long file names become valid, distinct interface
 names (readable prefix + short hash), and `nm::import` adds a suffix if a
 profile already uses the same interface.
+
+**OpenVPN through NetworkManager's plugin.** `profile.rs` recognises a file by
+its content and sends `.ovpn` profiles to `ovpn.rs`, which keeps what providers
+use (servers, certificates, encryption, `auth-user-pass`) and lists the rest as
+ignored. NetworkManager has no D-Bus import for `.ovpn` either (its importer is
+in the plugin's C library), so the profile becomes the plugin's `vpn.data`
+string map, in the layout `nm-connection-editor` writes. The plugin wants
+certificate *files*: they are written to `~/.cert/nm-openvpn/tunnelbird-<uuid>/`
+(mode 0600), the folder `nm-connection-editor` uses, because SELinux on Fedora
+lets OpenVPN read certificates there and nowhere else in the home folder (the
+Snap uses its common data folder instead). A password typed in the editor is
+stored by NetworkManager like WireGuard keys; left empty, the desktop asks for
+it at the first connection and its keyring keeps it. An OpenVPN interface is
+only known while connected: `nm.rs` finds the device carrying the active
+connection's IP configuration. If the plugin is missing, the activation error
+is recognised and `ovpn::plugin_install_command` gives the command for the
+distribution (read from `os-release`, also from inside a Flatpak or a Snap).
 
 **Provider detection.** Only public hints from the providers' own files:
 server domain or address range, internal DNS server, then words of the profile

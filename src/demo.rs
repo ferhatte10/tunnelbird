@@ -22,6 +22,7 @@ use gtk::{gio, glib};
 use crate::config::{self, WgConfig};
 use crate::geo::Location;
 use crate::nm::{Tunnel, TunnelState};
+use crate::profile::Kind;
 use crate::settings::{Settings, Style};
 use crate::traffic::{Counters, Sample};
 use crate::trust::{Network, NetworkKind, Pin, Policy};
@@ -88,37 +89,50 @@ fn settings_dir() -> std::path::PathBuf {
     glib::tmp_dir().join(format!("tunnelbird-demo-{}", std::process::id()))
 }
 
-/// `(name, endpoint, addresses, all traffic?)` of each demo tunnel.
-const TUNNELS: [(&str, &str, &str, bool); 4] = [
+/// `(name, kind, endpoint, addresses, all traffic?)` of each demo tunnel.
+const TUNNELS: [(&str, Kind, &str, &str, bool); 4] = [
     (
         "Amsterdam",
+        Kind::WireGuard,
         "203.0.113.10:51820",
         "10.66.0.2/32, fd00:66::2/128",
         true,
     ),
     (
         "Home Server",
+        Kind::WireGuard,
         "vpn.example.com:51820",
         "10.10.0.2/32",
         false,
     ),
-    ("Office", "198.51.100.7:51820", "172.16.40.12/32", false),
-    ("Tokyo", "203.0.113.80:51820", "10.67.0.9/32", true),
+    ("Office", Kind::OpenVpn, "198.51.100.7:1194", "", false),
+    (
+        "Tokyo",
+        Kind::WireGuard,
+        "203.0.113.80:51820",
+        "10.67.0.9/32",
+        true,
+    ),
 ];
 
 pub fn tunnels() -> Vec<Tunnel> {
     TUNNELS
         .iter()
         .enumerate()
-        .map(|(index, (name, endpoint, addresses, full))| {
+        .map(|(index, (name, kind, endpoint, addresses, full))| {
             let connected = index == 0;
             Tunnel {
                 path: format!("/demo/{index}").try_into().unwrap_or_default(),
                 uuid: format!("00000000-0000-4000-8000-00000000000{}", index + 1),
                 name: (*name).to_owned(),
+                kind: *kind,
                 interface: config::interface_name(name),
                 endpoint: Some((*endpoint).to_owned()),
-                addresses: addresses.split(", ").map(str::to_owned).collect(),
+                addresses: addresses
+                    .split(", ")
+                    .filter(|a| !a.is_empty())
+                    .map(str::to_owned)
+                    .collect(),
                 full_tunnel: *full,
                 provider: None,
                 state: if connected {
@@ -182,6 +196,19 @@ pub fn config(full: bool) -> WgConfig {
         key("Tunnelbird demo public key 00001"),
     );
     config::parse(&text).unwrap_or_default()
+}
+
+/// An OpenVPN profile as providers ship it, for the import preview. The
+/// certificates are placeholders, not real ones.
+pub fn ovpn_config() -> crate::ovpn::OvpnConfig {
+    let text = "client\ndev tun\nproto udp\nremote vpn.example.com 1194\nremote 198.51.100.7 443 tcp\n\
+        remote-random\nnobind\npersist-key\npersist-tun\nauth-user-pass\nremote-cert-tls server\n\
+        data-ciphers AES-256-GCM:CHACHA20-POLY1305\nauth SHA256\nredirect-gateway def1\n\
+        <ca>\n-----BEGIN CERTIFICATE-----\nDEMO\n-----END CERTIFICATE-----\n</ca>\n\
+        <tls-crypt>\n-----BEGIN OpenVPN Static key V1-----\nDEMO\n-----END OpenVPN Static key V1-----\n</tls-crypt>\n";
+    let mut config = crate::ovpn::parse(text).unwrap_or_default();
+    config.username = "alex".to_owned();
+    config
 }
 
 /// Traffic of a busy connection: a few megabytes per second with bursts.

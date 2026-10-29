@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright 2026 Ferhat Saidoun
 
-//! Sharing a tunnel: export as a `.conf` file, or show it as a QR code that
-//! phone apps can scan (like web dashboards for self-hosted servers do).
+//! Sharing a tunnel: export as a `.conf` or `.ovpn` file, or show a WireGuard®
+//! tunnel as a QR code that phone apps can scan (like web dashboards for
+//! self-hosted servers do).
 //!
 //! Both contain the tunnel's private key: the file is written readable by its
-//! owner only, and the QR dialog says plainly who must not see it.
+//! owner only, and the QR dialog says plainly who must not see it. An OpenVPN
+//! password is never exported.
 
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -18,22 +20,27 @@ use qrcode::{Color, EcLevel, QrCode};
 
 use crate::LOG_DOMAIN;
 use crate::config::WgConfig;
+use crate::profile::{Kind, Profile};
 
 /// Asks where to save the tunnel and writes it. Returns the saved path, or the
 /// error to show; `Ok(None)` when the user cancelled.
 pub async fn export_file(
     parent: &gtk::Window,
     name: &str,
-    config: &WgConfig,
+    profile: &Profile,
 ) -> Result<Option<String>, String> {
+    let extension = profile.kind().extension();
     let filter = gtk::FileFilter::new();
-    filter.set_name(Some(&gettext("Tunnel Configuration")));
-    filter.add_pattern("*.conf");
+    filter.set_name(Some(&match profile.kind() {
+        Kind::WireGuard => gettext("Tunnel Configuration"),
+        Kind::OpenVpn => gettext("OpenVPN Profile"),
+    }));
+    filter.add_pattern(&format!("*.{extension}"));
     let filters = gio::ListStore::new::<gtk::FileFilter>();
     filters.append(&filter);
     let dialog = gtk::FileDialog::builder()
         .title(gettext("Export Tunnel"))
-        .initial_name(format!("{}.conf", file_stem(name)))
+        .initial_name(format!("{}.{extension}", file_stem(name)))
         .filters(&filters)
         .modal(true)
         .build();
@@ -52,7 +59,7 @@ pub async fn export_file(
         .truncate(true)
         .mode(0o600)
         .open(&path)
-        .and_then(|mut out| out.write_all(config.to_conf().as_bytes()));
+        .and_then(|mut out| out.write_all(profile.to_text().as_bytes()));
     match written {
         Ok(()) => {
             glib::g_info!(LOG_DOMAIN, "Tunnel “{name}” exported to {}", path.display());

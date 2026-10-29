@@ -68,6 +68,9 @@ jobs:
   in `Cargo.toml`) lists the runtime dependencies: `libgtk-4-1 (>= 4.14)`,
   `libadwaita-1-0 (>= 1.5)`, `libsoup-3.0-0`, `network-manager`, `iso-codes`
   (Fedora: `gtk4`, `libadwaita`, `libsoup3`, `NetworkManager`, `iso-codes`).
+  Recommended, so installed by default but not forced on WireGuard-only users:
+  `network-manager-openvpn-gnome` (Fedora: `NetworkManager-openvpn-gnome`), the
+  OpenVPN plugin and the part that lets the desktop ask for its password.
 - `publish` checks that the tag equals `Cargo.toml`'s version and the newest
   `<release>` of the metainfo, then fails loudly otherwise.
 - `actions/attest-build-provenance@<sha>` signs each file through GitHub's

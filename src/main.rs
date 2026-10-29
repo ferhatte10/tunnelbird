@@ -4,36 +4,39 @@
 //! Tunnelbird: a lightweight GTK4/libadwaita VPN client,
 //! built on top of NetworkManager.
 //!
-//! Module map (see `docs/ARCHITECTURE.md`):
+//! Module map (see `docs/ARCHITECTURE.md`). Shared logic lives in the
+//! `tunnelbird-core` crate (`crates/core`): `.conf` and `.ovpn` parsers,
+//! providers, trusted networks, server health, versions. This crate is the
+//! Linux app:
 //! - [`demo`]    made-up data for screenshots (`TUNNELBIRD_DEMO`);
-//! - [`config`]  parses `wg-quick` `.conf` files, [`editor`] shows and edits them;
+//! - [`editor`]  shows and edits a tunnel before import or later;
 //! - [`geo`]     looks up the public IP and its location;
-//! - [`health`]  tells a working tunnel from one whose server stays silent;
 //! - [`nm`]      talks to NetworkManager over D-Bus;
-//! - [`provider`] recognises well-known VPN providers;
+//! - [`openvpn`] NetworkManager's OpenVPN plugin settings and certificate files;
+//! - [`portal`]  desktop portals used from a Flatpak sandbox;
 //! - [`settings`] stores user preferences, [`preferences`] edits them;
 //! - [`share`]   exports a tunnel as a file or a QR code;
 //! - [`traffic`] reads interface counters and draws the live graph;
-//! - [`trust`]   decides when to connect automatically (trusted networks);
+//! - [`tray`]    top bar icon and menu;
 //! - [`update`]  tells when a new version is out and how it arrives;
 //! - [`window`]  builds the user interface.
 
-mod config;
 mod demo;
 mod editor;
 mod geo;
-mod health;
 mod nm;
+mod openvpn;
 mod portal;
 pub mod preferences;
-mod provider;
 mod settings;
 mod share;
 mod traffic;
 mod tray;
-mod trust;
 mod update;
 mod window;
+
+// Shared with the other systems; `crate::config` and the like keep working.
+use tunnelbird_core::{config, health, ovpn, profile, provider, trust, version};
 
 use std::os::unix::process::CommandExt;
 use std::sync::atomic::{AtomicBool, Ordering};

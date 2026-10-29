@@ -4,8 +4,9 @@
 //! NetworkManager client over the system D-Bus.
 //!
 //! Tunnelbird never creates the network interface itself: it asks NetworkManager
-//! to store, activate or deactivate a WireGuard profile. Permissions are
-//! therefore handled by polkit and the app runs without any privilege.
+//! to store, activate or deactivate a WireGuard profile, or an OpenVPN one run by
+//! NetworkManager's OpenVPN plugin. Permissions are therefore handled by polkit
+//! and the app runs without any privilege.
 
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
@@ -17,6 +18,9 @@ use zbus::{
 };
 
 use crate::config::{Interface, IpNet, Peer, WgConfig};
+use crate::openvpn;
+use crate::ovpn::OvpnConfig;
+use crate::profile::{Kind, Profile};
 use crate::trust::{self, Network, NetworkKind};
 
 const NM_SERVICE: &str = "org.freedesktop.NetworkManager";
@@ -37,6 +41,8 @@ trait NetworkManager {
     ) -> zbus::Result<OwnedObjectPath>;
 
     fn deactivate_connection(&self, active_connection: &ObjectPath<'_>) -> zbus::Result<()>;
+
+    fn get_all_devices(&self) -> zbus::Result<Vec<OwnedObjectPath>>;
 
     #[zbus(property)]
     fn active_connections(&self) -> zbus::Result<Vec<OwnedObjectPath>>;
@@ -94,6 +100,33 @@ trait NmActive {
 
     #[zbus(property)]
     fn devices(&self) -> zbus::Result<Vec<OwnedObjectPath>>;
+
+    #[zbus(property)]
+    fn ip4_config(&self) -> zbus::Result<OwnedObjectPath>;
+}
+
+#[proxy(
+    interface = "org.freedesktop.NetworkManager.Device",
+    default_service = "org.freedesktop.NetworkManager"
+)]
+trait NmDevice {
+    #[zbus(property)]
+    fn interface(&self) -> zbus::Result<String>;
+
+    #[zbus(property)]
+    fn ip_interface(&self) -> zbus::Result<String>;
+
+    #[zbus(property)]
+    fn ip4_config(&self) -> zbus::Result<OwnedObjectPath>;
+}
+
+#[proxy(
+    interface = "org.freedesktop.NetworkManager.IP4Config",
+    default_service = "org.freedesktop.NetworkManager"
+)]
+trait NmIp4Config {
+    #[zbus(property)]
+    fn address_data(&self) -> zbus::Result<Vec<HashMap<String, OwnedVariant>>>;
 }
 
 #[proxy(
@@ -127,6 +160,8 @@ pub struct Tunnel {
     pub path: OwnedObjectPath,
     pub uuid: String,
     pub name: String,
+    pub kind: Kind,
+    /// Network interface. OpenVPN's (`tun0`…) is only known while connected.
     pub interface: String,
     pub endpoint: Option<String>,
     /// Addresses of this computer inside the VPN (`10.8.0.3/32`…).
@@ -138,6 +173,16 @@ pub struct Tunnel {
     pub state: TunnelState,
     /// Matching active connection, needed to deactivate the tunnel.
     pub active_path: Option<OwnedObjectPath>,
+}
+
+/// A tunnel being connected or connected.
+struct Active {
+    path: OwnedObjectPath,
+    state: TunnelState,
+    /// True when it holds the default route (all traffic goes through it).
+    is_default: bool,
+    /// OpenVPN: the interface NetworkManager created and its addresses.
+    link: Option<(String, Vec<String>)>,
 }
 
 #[derive(Clone)]
@@ -152,9 +197,10 @@ impl Nm {
         })
     }
 
-    /// WireGuard profiles known to NetworkManager with their current state, sorted by name.
+    /// WireGuard and OpenVPN profiles known to NetworkManager with their
+    /// current state, sorted by name.
     pub async fn tunnels(&self) -> zbus::Result<Vec<Tunnel>> {
-        let active = self.active_wireguard().await?;
+        let mut active = self.active_tunnels().await?;
         let settings = NmSettingsProxy::new(&self.conn).await?;
         let mut tunnels = Vec::new();
 
@@ -175,29 +221,53 @@ impl Nm {
                     continue;
                 }
             };
-            if get_str(&settings, "connection", "type").as_deref() != Some("wireguard") {
+            let Some(kind) = tunnel_kind(&settings) else {
                 continue;
-            }
-            let uuid = get_str(&settings, "connection", "uuid").unwrap_or_default();
-            let (state, active_path) = match active.get(&uuid) {
-                Some((path, state)) => (*state, Some(path.clone())),
-                None => (TunnelState::Disconnected, None),
             };
+            let uuid = get_str(&settings, "connection", "uuid").unwrap_or_default();
+            let active = active.remove(&uuid);
             let name = get_str(&settings, "connection", "id").unwrap_or_default();
-            let endpoint = first_endpoint(&settings);
+            let (interface, endpoint, addresses, full_tunnel, dns) = match kind {
+                Kind::WireGuard => (
+                    get_str(&settings, "connection", "interface-name").unwrap_or_default(),
+                    first_endpoint(&settings),
+                    addresses(&settings),
+                    is_full_tunnel(&settings),
+                    dns_servers(&settings),
+                ),
+                Kind::OpenVpn => {
+                    let (interface, addresses) = active
+                        .as_ref()
+                        .and_then(|a| a.link.clone())
+                        .unwrap_or_default();
+                    // The server decides (redirect-gateway): known once connected.
+                    let full = match &active {
+                        Some(a) if a.state == TunnelState::Connected => a.is_default,
+                        _ => !get_bool(&settings, "ipv4", "never-default"),
+                    };
+                    let endpoint =
+                        openvpn::from_nm_data(&vpn_data(&settings), None, |_| None).endpoint();
+                    (interface, endpoint, addresses, full, Vec::new())
+                }
+            };
             let provider = crate::provider::detect(&crate::provider::Hints {
                 name: &name,
                 endpoint: endpoint.as_deref(),
-                dns: &dns_servers(&settings),
+                dns: &dns,
             });
+            let (state, active_path) = match active {
+                Some(active) => (active.state, Some(active.path)),
+                None => (TunnelState::Disconnected, None),
+            };
             tunnels.push(Tunnel {
                 path,
                 name,
-                interface: get_str(&settings, "connection", "interface-name").unwrap_or_default(),
+                kind,
+                interface,
                 endpoint,
                 provider,
-                addresses: addresses(&settings),
-                full_tunnel: is_full_tunnel(&settings),
+                addresses,
+                full_tunnel,
                 uuid,
                 state,
                 active_path,
@@ -207,9 +277,7 @@ impl Nm {
         Ok(tunnels)
     }
 
-    async fn active_wireguard(
-        &self,
-    ) -> zbus::Result<HashMap<String, (OwnedObjectPath, TunnelState)>> {
+    async fn active_tunnels(&self) -> zbus::Result<HashMap<String, Active>> {
         let nm = NetworkManagerProxy::new(&self.conn).await?;
         let mut active = HashMap::new();
         for path in nm.active_connections().await? {
@@ -217,7 +285,8 @@ impl Nm {
                 .path(path.clone())
                 .build()
                 .await?;
-            if proxy.kind().await.ok().as_deref() != Some("wireguard") {
+            let kind = proxy.kind().await.ok();
+            if !matches!(kind.as_deref(), Some("wireguard" | "vpn")) {
                 continue;
             }
             let state = match proxy.state().await.unwrap_or(0) {
@@ -226,11 +295,91 @@ impl Nm {
                 3 => TunnelState::Disconnecting,
                 _ => TunnelState::Disconnected,
             };
+            let link = if kind.as_deref() == Some("vpn") && state == TunnelState::Connected {
+                self.vpn_link(&proxy).await
+            } else {
+                None
+            };
             if let Ok(uuid) = proxy.uuid().await {
-                active.insert(uuid, (path, state));
+                let is_default = proxy.is_default().await.unwrap_or(false);
+                active.insert(
+                    uuid,
+                    Active {
+                        path,
+                        state,
+                        is_default,
+                        link,
+                    },
+                );
             }
         }
         Ok(active)
+    }
+
+    /// The interface and addresses of a connected OpenVPN tunnel. The active
+    /// connection does not name its interface: it is the device carrying the
+    /// same IP configuration (or, failing that, the same addresses).
+    async fn vpn_link(&self, active: &NmActiveProxy<'_>) -> Option<(String, Vec<String>)> {
+        let config = active
+            .ip4_config()
+            .await
+            .ok()
+            .filter(|p| p.as_str() != "/")?;
+        let addresses = self.ip4_addresses(&config).await;
+        let nm = NetworkManagerProxy::new(&self.conn).await.ok()?;
+        for path in nm.get_all_devices().await.ok()? {
+            let Ok(device) = NmDeviceProxy::builder(&self.conn).path(path).build().await else {
+                continue;
+            };
+            let Ok(device_config) = device.ip4_config().await else {
+                continue;
+            };
+            let same = device_config == config
+                || (!addresses.is_empty()
+                    && self
+                        .ip4_addresses(&device_config)
+                        .await
+                        .iter()
+                        .any(|address| addresses.contains(address)));
+            if !same {
+                continue;
+            }
+            let interface = match device.ip_interface().await {
+                Ok(name) if !name.is_empty() => name,
+                _ => device.interface().await.ok()?,
+            };
+            return Some((interface, addresses));
+        }
+        glib::g_debug!(
+            crate::LOG_DOMAIN,
+            "No interface found for an OpenVPN tunnel"
+        );
+        None
+    }
+
+    /// `address/prefix` list of an IPv4 configuration object.
+    async fn ip4_addresses(&self, path: &OwnedObjectPath) -> Vec<String> {
+        if path.as_str() == "/" {
+            return Vec::new();
+        }
+        let Ok(config) = NmIp4ConfigProxy::builder(&self.conn)
+            .path(path.clone())
+            .build()
+            .await
+        else {
+            return Vec::new();
+        };
+        config
+            .address_data()
+            .await
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|entry| {
+                let address = String::try_from(entry.get("address")?.try_clone().ok()?).ok()?;
+                let prefix = u32::try_from(entry.get("prefix")?.try_clone().ok()?).ok()?;
+                Some(format!("{address}/{prefix}"))
+            })
+            .collect()
     }
 
     pub async fn activate(&self, tunnel: &Tunnel) -> zbus::Result<()> {
@@ -345,24 +494,75 @@ impl Nm {
             .filter(|address| !address.is_empty())
     }
 
-    /// Reads a tunnel back as a configuration, keys included, for the editor.
-    /// Keys are kept in memory only for the time the editor is open.
-    pub async fn read_config(&self, tunnel: &Tunnel) -> zbus::Result<WgConfig> {
+    /// Reads a tunnel back as a profile, keys included, for the editor and
+    /// sharing. Keys are kept in memory only for the time they are needed.
+    pub async fn read_profile(&self, tunnel: &Tunnel) -> zbus::Result<Profile> {
         let proxy = self.connection_proxy(tunnel).await?;
         let settings = proxy.get_settings().await?;
-        let secrets = proxy.get_secrets("wireguard").await?;
-        Ok(config_from_settings(&settings, &secrets))
+        match tunnel.kind {
+            Kind::WireGuard => {
+                let secrets = proxy.get_secrets("wireguard").await?;
+                Ok(Profile::WireGuard(config_from_settings(
+                    &settings, &secrets,
+                )))
+            }
+            Kind::OpenVpn => {
+                // A password kept by the desktop keyring is not NetworkManager's
+                // to give: none is fine.
+                let password = proxy
+                    .get_secrets("vpn")
+                    .await
+                    .ok()
+                    .and_then(|secrets| vpn_dict(&secrets, "secrets").remove("password"));
+                Ok(Profile::OpenVpn(Box::new(openvpn::from_nm_data(
+                    &vpn_data(&settings),
+                    password,
+                    |path| std::fs::read_to_string(path).ok(),
+                ))))
+            }
+        }
     }
 
     /// Saves an edited tunnel. Only the fields the editor manages are replaced:
     /// any other setting of the profile (routes, permissions…) is kept.
-    pub async fn update(&self, tunnel: &Tunnel, config: &WgConfig, name: &str) -> zbus::Result<()> {
+    pub async fn update(&self, tunnel: &Tunnel, profile: &Profile, name: &str) -> zbus::Result<()> {
+        let config = match profile {
+            Profile::WireGuard(config) => config,
+            Profile::OpenVpn(config) => return self.update_openvpn(tunnel, config, name).await,
+        };
         let proxy = self.connection_proxy(tunnel).await?;
         let mut current = proxy.get_settings().await?;
         let new = to_nm_settings(config, name, &tunnel.interface, &tunnel.uuid);
         for (section, managed) in MANAGED_KEYS {
             let target = current.entry((*section).to_owned()).or_default();
             target.retain(|key, _| !managed.contains(&key.as_str()));
+            for (key, value) in new.get(section).into_iter().flatten() {
+                target.insert(
+                    (*key).to_owned(),
+                    OwnedVariant::try_from(value.try_clone()?)?,
+                );
+            }
+        }
+        proxy.update(current).await
+    }
+
+    /// OpenVPN: the plugin settings are all the editor's, so the `vpn`
+    /// section is replaced as a whole; the rest of the profile is kept.
+    async fn update_openvpn(
+        &self,
+        tunnel: &Tunnel,
+        config: &OvpnConfig,
+        name: &str,
+    ) -> zbus::Result<()> {
+        let paths = openvpn::store_files(&tunnel.uuid, config).map_err(io_error)?;
+        let proxy = self.connection_proxy(tunnel).await?;
+        let mut current = proxy.get_settings().await?;
+        let new = openvpn_settings(config, &paths, name, &tunnel.uuid);
+        for section in ["connection", "vpn"] {
+            let target = current.entry(section.to_owned()).or_default();
+            if section == "vpn" {
+                target.clear();
+            }
             for (key, value) in new.get(section).into_iter().flatten() {
                 target.insert(
                     (*key).to_owned(),
@@ -391,7 +591,7 @@ impl Nm {
     /// Stores a new profile in NetworkManager and returns its final, unique name.
     pub async fn import(
         &self,
-        config: &WgConfig,
+        profile: &Profile,
         name: &str,
         interface: &str,
     ) -> zbus::Result<String> {
@@ -413,10 +613,30 @@ impl Nm {
             n += 1;
         }
         let uuid = uuid::Uuid::new_v4().to_string();
-        NmSettingsProxy::new(&self.conn)
-            .await?
-            .add_connection(to_nm_settings(config, &unique, &ifname, &uuid))
-            .await?;
+        let settings = NmSettingsProxy::new(&self.conn).await?;
+        match profile {
+            Profile::WireGuard(config) => {
+                settings
+                    .add_connection(to_nm_settings(config, &unique, &ifname, &uuid))
+                    .await?;
+            }
+            Profile::OpenVpn(config) => {
+                // NetworkManager reads the certificates from files.
+                let paths = openvpn::store_files(&uuid, config).map_err(io_error)?;
+                let added = settings
+                    .add_connection(openvpn_settings(config, &paths, &unique, &uuid))
+                    .await;
+                if let Err(err) = added {
+                    if let Err(cleanup) = openvpn::remove_files(&uuid) {
+                        glib::g_warning!(
+                            crate::LOG_DOMAIN,
+                            "Cannot remove certificates: {cleanup}"
+                        );
+                    }
+                    return Err(err);
+                }
+            }
+        }
         Ok(unique)
     }
 
@@ -845,4 +1065,82 @@ fn ip_settings(config: &WgConfig, v4: bool) -> HashMap<&'static str, Variant<'st
 
 fn net_to_string(net: &IpNet) -> String {
     format!("{}/{}", net.addr, net.prefix)
+}
+
+/// Which kind of tunnel a profile is, or `None` for anything else.
+fn tunnel_kind(settings: &Settings) -> Option<Kind> {
+    match get_str(settings, "connection", "type")?.as_str() {
+        "wireguard" => Some(Kind::WireGuard),
+        "vpn"
+            if get_str(settings, "vpn", "service-type").as_deref()
+                == Some(openvpn::SERVICE_TYPE) =>
+        {
+            Some(Kind::OpenVpn)
+        }
+        _ => None,
+    }
+}
+
+/// The OpenVPN plugin's settings (`vpn.data`).
+fn vpn_data(settings: &Settings) -> HashMap<String, String> {
+    vpn_dict(settings, "data")
+}
+
+/// A string map of the `vpn` section (`data` or `secrets`).
+fn vpn_dict(settings: &Settings, key: &str) -> HashMap<String, String> {
+    settings
+        .get("vpn")
+        .and_then(|vpn| vpn.get(key))
+        .and_then(|value| value.try_clone().ok())
+        .and_then(|value| HashMap::<String, String>::try_from(value).ok())
+        .unwrap_or_default()
+}
+
+fn get_bool(settings: &Settings, section: &str, key: &str) -> bool {
+    settings
+        .get(section)
+        .and_then(|s| s.get(key))
+        .and_then(|v| v.try_clone().ok())
+        .and_then(|v| bool::try_from(v).ok())
+        .unwrap_or(false)
+}
+
+/// An OpenVPN profile for NetworkManager's plugin, in the layout
+/// `nm-connection-editor` writes. Addresses, routes and DNS come from the server.
+fn openvpn_settings<'a>(
+    config: &'a OvpnConfig,
+    paths: &openvpn::Paths,
+    name: &'a str,
+    uuid: &'a str,
+) -> HashMap<&'a str, HashMap<&'a str, Variant<'a>>> {
+    let connection = HashMap::from([
+        ("id", Variant::from(name)),
+        ("uuid", Variant::from(uuid)),
+        ("type", Variant::from("vpn")),
+        ("autoconnect", Variant::from(false)),
+    ]);
+    let data: HashMap<String, String> = openvpn::to_nm_data(config, paths)
+        .into_iter()
+        .map(|(key, value)| (key.to_owned(), value))
+        .collect();
+    let mut vpn = HashMap::from([
+        ("service-type", Variant::from(openvpn::SERVICE_TYPE)),
+        ("data", Variant::from(data)),
+    ]);
+    if config.user_pass && !config.password.is_empty() {
+        let secrets = HashMap::from([("password".to_owned(), config.password.clone())]);
+        vpn.insert("secrets", Variant::from(secrets));
+    }
+    let auto = || HashMap::from([("method", Variant::from("auto"))]);
+    HashMap::from([
+        ("connection", connection),
+        ("vpn", vpn),
+        ("ipv4", auto()),
+        ("ipv6", auto()),
+    ])
+}
+
+/// A file error (writing certificates) reported like a D-Bus one.
+fn io_error(err: std::io::Error) -> zbus::Error {
+    zbus::Error::Failure(err.to_string())
 }

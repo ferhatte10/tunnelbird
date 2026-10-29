@@ -28,7 +28,8 @@ repository (`url` + `tag` + `commit`).
 | `--socket=wayland`, `--socket=fallback-x11`, `--share=ipc`, `--device=dri` | Show the window (GPU rendering) |
 | `--share=network` | Public IP and location lookup; the host network namespace also exposes tunnel counters in `/sys/class/net` |
 | `--system-talk-name=org.freedesktop.NetworkManager` | List, import, connect and edit tunnels |
+| `--filesystem=~/.cert/nm-openvpn:create` | OpenVPN certificates and keys, written where NetworkManager's OpenVPN may read them (the folder `nm-connection-editor` uses; on Fedora, SELinux denies other places in the home folder) |
 | `--talk-name=org.kde.StatusNotifierWatcher` | Top bar icon (registered under the app's unique bus name, so no `--own-name`) |
 
-No file system access: imports and exports go through the file chooser portal,
+No other file system access: imports and exports go through the file chooser portal,
 notifications and start at login through their portals.

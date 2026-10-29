@@ -276,9 +276,6 @@ msgstr "Quitter"
 msgid "Invalid server address “{value}”: expected host:port, for example vpn.example.com:51820"
 msgstr "Adresse de serveur invalide « {value} » : forme attendue hôte:port, par exemple vpn.example.com:51820"
 
-msgid "This is an OpenVPN profile. Tunnelbird does not support this protocol yet: ask your provider for a .conf tunnel file instead."
-msgstr "Ceci est un profil OpenVPN. Tunnelbird ne prend pas encore ce protocole en charge : demandez plutôt un fichier de tunnel .conf à votre fournisseur."
-
 msgid "This file uses obfuscation settings ({keys}) that the system cannot apply. Download a standard configuration from your provider."
 msgstr "Ce fichier utilise des réglages d’obfuscation ({keys}) que le système ne sait pas appliquer. Téléchargez une configuration standard chez votre fournisseur."
 
@@ -425,9 +422,6 @@ msgstr "QR code de « {name} »"
 
 msgid "Share"
 msgstr "Partager"
-
-msgid "Both include the private key of this tunnel: keep them to yourself."
-msgstr "Les deux contiennent la clé privée de ce tunnel : gardez-les pour vous."
 
 msgid "Export as File…"
 msgstr "Exporter en fichier…"
@@ -600,3 +594,105 @@ msgstr "Mise à jour disponible…"
 
 msgid "Restart to Finish the Update…"
 msgstr "Redémarrer pour terminer la mise à jour…"
+
+msgid "Protocol"
+msgstr "Protocole"
+
+msgid "User Name"
+msgstr "Nom d’utilisateur"
+
+msgid "Password (optional)"
+msgstr "Mot de passe (facultatif)"
+
+msgid "Decided by the server when connecting"
+msgstr "Décidé par le serveur à la connexion"
+
+msgid "This profile has {count} servers. Only the first one is shown; the others are kept and tried in turn."
+msgstr "Ce profil compte {count} serveurs. Seul le premier est affiché ; les autres sont conservés et essayés à tour de rôle."
+
+msgid "Login"
+msgstr "Connexion au compte"
+
+msgid "Leave the password empty to be asked at the first connection: your desktop's keyring then keeps it."
+msgstr "Laissez le mot de passe vide pour qu’il soit demandé à la première connexion : le trousseau de votre bureau le garde ensuite."
+
+msgid "Included"
+msgstr "Inclus"
+
+msgid "None"
+msgstr "Aucune"
+
+msgid "Security"
+msgstr "Sécurité"
+
+msgid "Set by your provider and kept as they are"
+msgstr "Définis par votre fournisseur et gardés tels quels"
+
+msgid "Server Certificate"
+msgstr "Certificat du serveur"
+
+msgid "Client Certificate"
+msgstr "Certificat client"
+
+msgid "None: user name and password"
+msgstr "Aucun : nom d’utilisateur et mot de passe"
+
+msgid "Encryption"
+msgstr "Chiffrement"
+
+msgid "Agreed with the server"
+msgstr "Négocié avec le serveur"
+
+msgid "Extra Protection"
+msgstr "Protection supplémentaire"
+
+msgid "Encrypted control channel (tls-crypt)"
+msgstr "Canal de contrôle chiffré (tls-crypt)"
+
+msgid "Signed control channel (tls-auth)"
+msgstr "Canal de contrôle signé (tls-auth)"
+
+msgid "Enter the server address, for example vpn.example.com:1194"
+msgstr "Saisissez l’adresse du serveur, par exemple vpn.example.com:1194"
+
+msgid "Enter the user name given by your provider"
+msgstr "Saisissez le nom d’utilisateur fourni par votre fournisseur"
+
+msgid "Shared tunnels include the private key: keep them to yourself."
+msgstr "Les tunnels partagés contiennent la clé privée : gardez-les pour vous."
+
+msgid "Tunnelbird connects OpenVPN profiles through the network settings of your system, which need their OpenVPN support. Install it, then connect again:"
+msgstr "Tunnelbird connecte les profils OpenVPN grâce aux réglages réseau de votre système, qui ont besoin de leur module OpenVPN. Installez-le, puis connectez-vous à nouveau :"
+
+msgid "Tunnelbird connects OpenVPN profiles through the network settings of your system, which need their OpenVPN support. Install your distribution's NetworkManager OpenVPN package (often called networkmanager-openvpn), then connect again."
+msgstr "Tunnelbird connecte les profils OpenVPN grâce aux réglages réseau de votre système, qui ont besoin de leur module OpenVPN. Installez le paquet OpenVPN de NetworkManager de votre distribution (souvent appelé networkmanager-openvpn), puis connectez-vous à nouveau."
+
+msgid "OpenVPN Support Is Not Installed"
+msgstr "Le module OpenVPN n’est pas installé"
+
+msgid "OpenVPN Profile"
+msgstr "Profil OpenVPN"
+
+msgid "The profile has no server (remote line)"
+msgstr "Le profil n’indique aucun serveur (ligne remote)"
+
+msgid "The profile has no server certificate (ca)"
+msgstr "Le profil ne contient pas le certificat du serveur (ca)"
+
+msgid "The profile has neither a client certificate nor a user name and password (auth-user-pass)"
+msgstr "Le profil n’a ni certificat client ni nom d’utilisateur et mot de passe (auth-user-pass)"
+
+msgid "{directive} needs a value"
+msgstr "{directive} demande une valeur"
+
+msgid "“{directive}” is not supported yet: ask your provider for a profile with certificates in PEM format"
+msgstr "« {directive} » n’est pas encore pris en charge : demandez à votre fournisseur un profil avec des certificats au format PEM"
+
+msgid "The <{tag}> block is never closed"
+msgstr "Le bloc <{tag}> n’est jamais fermé"
+
+msgid "The profile refers to the file “{file}”, which was not found. Select it together with the .ovpn file, or ask your provider for a profile with everything inside."
+msgstr "Le profil fait référence au fichier « {file} », introuvable. Sélectionnez-le en même temps que le fichier .ovpn, ou demandez à votre fournisseur un profil qui contient tout."
+
+msgid "Not included"
+msgstr "Non inclus"
