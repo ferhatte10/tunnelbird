@@ -55,17 +55,17 @@ jobs:
 
 | Job | Runner | Output |
 |---|---|---|
-| `deb` (matrix amd64, arm64) | `ubuntu-24.04`, `ubuntu-24.04-arm` | `tunnelbird_X.Y.Z_{amd64,arm64}.deb` via `cargo-deb` |
-| `rpm` (matrix x86_64, aarch64) | same runners, container `fedora:42@sha256:…` | `tunnelbird-X.Y.Z-1.{x86_64,aarch64}.rpm` via `cargo-generate-rpm` |
+| `deb` (matrix amd64, arm64) | `ubuntu-24.04`, `ubuntu-24.04-arm` | `tunnelbird_X.Y.Z_{amd64,arm64}.deb` via `make deb` (`build-aux/packaging/deb.sh`) |
+| `rpm` (matrix x86_64, aarch64) | same runners, container `fedora:42@sha256:…` | `tunnelbird-X.Y.Z-1.fc42.{x86_64,aarch64}.rpm` via `make rpm` (`tunnelbird.spec`) |
 | `flatpak` | `ubuntu-24.04` | `tunnelbird-X.Y.Z.flatpak` (offline bundle, for testers) |
 | `publish` | `ubuntu-24.04` | GitHub release + `SHA256SUMS` + `latest.json` + build provenance |
 
 - The `.rpm` is built inside Fedora so it links against Fedora's libraries; the
   `.deb` on the oldest supported Ubuntu (24.04) works on newer Ubuntu and on
   Debian 13.
-- Both packages install exactly what `make install PREFIX=/usr` installs; the
-  package metadata (`[package.metadata.deb]`, `[package.metadata.generate-rpm]`
-  in `Cargo.toml`) lists the runtime dependencies: `libgtk-4-1 (>= 4.14)`,
+- Both packages install exactly what `make install PREFIX=/usr` installs
+  (written and checked: `build-aux/packaging/README.md`). Runtime
+  dependencies: `libgtk-4-1 (>= 4.14)`,
   `libadwaita-1-0 (>= 1.5)`, `libsoup-3.0-0`, `network-manager`, `iso-codes`
   (Fedora: `gtk4`, `libadwaita`, `libsoup3`, `NetworkManager`, `iso-codes`).
   Recommended, so installed by default but not forced on WireGuard-only users:
@@ -105,9 +105,8 @@ Budget per release: about 25 minutes over all jobs (free once public).
 
 1. Merge `feat/tunnelbird-v0.1` into `main` through a pull request (green
    `check`).
-2. Add the packaging metadata to `Cargo.toml` and test locally:
-   `cargo deb`, then `sudo apt install ./target/debian/tunnelbird_*.deb` in a
-   clean Ubuntu 24.04 VM; same for the `.rpm` in Fedora.
+2. Packaging: done (`make deb`, `make rpm`), checked in clean Ubuntu 24.04
+   and Fedora 42 containers; install on a real desktop VM once before the tag.
 3. Set the release date in the metainfo, tag `v0.1.0`, push the tag.
 4. Check the release page: 4 packages, the bundle, `SHA256SUMS`, `latest.json`,
    attestations.
@@ -117,5 +116,5 @@ Budget per release: about 25 minutes over all jobs (free once public).
 ## Testing it before spending minutes
 
 - `act` can run `check.yml` locally in a container to catch YAML mistakes.
-- The package jobs are plain commands (`cargo deb`, `cargo generate-rpm`),
+- The package jobs are plain commands (`make deb`, `make rpm`),
   tested by hand first, so the first CI run is not the first try.

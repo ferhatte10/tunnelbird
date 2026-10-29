@@ -67,7 +67,7 @@ phone and desktop, day and night. Open Graph images in both languages.
 
 | Path | Source |
 |---|---|
-| `/install.sh` | `website/static/install.sh` (versioned with the site) |
+| `/install.sh` | `build-aux/install.sh` (written and checked, copied by the site build) |
 | `/latest.json` | The latest GitHub release asset (see below) |
 | `/apt/…`, `/rpm/…` | Signed repositories (see below) |
 | `/tunnelbird.gpg` | Public signing key |
