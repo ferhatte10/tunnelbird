@@ -11,6 +11,7 @@
 //! - [`demo`]    made-up data for screenshots (`TUNNELBIRD_DEMO`);
 //! - [`editor`]  shows and edits a tunnel before import or later;
 //! - [`geo`]     looks up the public IP and its location;
+//! - [`logs`]    shows what happened to a tunnel;
 //! - [`nm`]      talks to NetworkManager over D-Bus;
 //! - [`openvpn`] NetworkManager's OpenVPN plugin settings and certificate files;
 //! - [`portal`]  desktop portals used from a Flatpak sandbox;
@@ -24,6 +25,7 @@
 mod demo;
 mod editor;
 mod geo;
+mod logs;
 mod nm;
 mod openvpn;
 mod portal;

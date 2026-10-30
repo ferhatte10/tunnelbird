@@ -728,6 +728,25 @@ impl Nm {
         }
         Ok(futures_util::stream::select_all(streams).map(|_| ()))
     }
+
+    /// Yields NetworkManager's reason each time a connection ends.
+    pub async fn end_reasons(&self) -> zbus::Result<impl Stream<Item = u32> + use<>> {
+        let rule = MatchRule::builder()
+            .msg_type(zbus::message::Type::Signal)
+            .sender(NM_SERVICE)
+            .interface("org.freedesktop.NetworkManager.Connection.Active")
+            .member("StateChanged")
+            .build()?;
+        let stream = MessageStream::for_match_rule(rule, &self.conn, None).await?;
+        Ok(stream.filter_map(|message| {
+            // NMActiveConnectionState: 4 is "deactivated".
+            let reason = message
+                .ok()
+                .and_then(|message| message.body().deserialize::<(u32, u32)>().ok())
+                .and_then(|(state, reason)| (state == 4).then_some(reason));
+            std::future::ready(reason)
+        }))
+    }
 }
 
 /// Human-readable message for a D-Bus error (polkit refusal, invalid profile…).

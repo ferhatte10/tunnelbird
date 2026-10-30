@@ -23,6 +23,7 @@ use crate::demo;
 use crate::editor;
 use crate::geo::{self, Location};
 use crate::health::{Health, HealthWatch};
+use crate::logs::{self, Events, Severity};
 use crate::nm::{self, Nm, Tunnel, TunnelState};
 use crate::openvpn;
 use crate::profile::{Kind, Profile};
@@ -103,6 +104,10 @@ pub struct Ui {
     /// Last state asked of the IPv6 guard; `None` until the first check,
     /// which also removes a guard left by a previous run.
     ipv6_guard: Cell<Option<bool>>,
+    /// What the logs of each tunnel show, besides the system journal.
+    events: Rc<RefCell<Events>>,
+    /// Why NetworkManager ended the last connection, until it is logged.
+    end_reason: RefCell<Option<String>>,
     http: soup::Session,
     geo: RefCell<GeoState>,
     app: adw::Application,
@@ -263,6 +268,8 @@ impl Ui {
             expecting: RefCell::new(HashSet::new()),
             refresh_queued: Cell::new(false),
             ipv6_guard: Cell::new(None),
+            events: Rc::new(RefCell::new(Events::default())),
+            end_reason: RefCell::new(None),
             http: geo::new_session(),
             geo: RefCell::new(GeoState::Idle),
             app: app.clone(),
@@ -372,6 +379,18 @@ impl Ui {
             });
             self.window.add_action(&action);
         }
+
+        let show_logs = gio::SimpleAction::new("show-logs", Some(glib::VariantTy::STRING));
+        let ui = self.clone();
+        show_logs.connect_activate(move |_, uuid| {
+            let tunnel = uuid
+                .and_then(|v| v.get::<String>())
+                .and_then(|uuid| ui.tunnels.borrow().iter().find(|t| t.uuid == uuid).cloned());
+            if let Some(tunnel) = tunnel {
+                logs::present(&ui.window, &tunnel, &ui.events, !demo::enabled());
+            }
+        });
+        self.window.add_action(&show_logs);
     }
 
     /// Accepts `.conf` files dropped anywhere on the window.
@@ -433,6 +452,19 @@ impl Ui {
                 });
             }
         }
+        match nm.end_reasons().await {
+            Ok(mut reasons) => {
+                let ui = self.clone();
+                glib::spawn_future_local(async move {
+                    while let Some(reason) = reasons.next().await {
+                        if let Some(text) = logs::reason_text(reason) {
+                            *ui.end_reason.borrow_mut() = Some(text);
+                        }
+                    }
+                });
+            }
+            Err(err) => glib::g_debug!(LOG_DOMAIN, "Cannot watch why connections end: {err}"),
+        }
         self.refresh().await;
     }
 
@@ -443,6 +475,7 @@ impl Ui {
             *self.geo.borrow_mut() = GeoState::Ready(connected.uuid.clone(), demo::location());
         }
         *self.tunnels.borrow_mut() = tunnels;
+        demo::fill_logs(&mut self.events.borrow_mut());
         for tick in 0..demo::HISTORY {
             self.live.graph.push(demo::sample(tick));
         }
@@ -534,6 +567,14 @@ impl Ui {
             shot(&format!("qr-code{suffix}")).await;
             close_dialog();
             settle(800).await;
+
+            if let Some(tunnel) = demo::tunnels().first() {
+                logs::present(&self.window, tunnel, &self.events, false);
+            }
+            settle(1200).await;
+            shot(&format!("logs{suffix}")).await;
+            close_dialog();
+            settle(800).await;
         }
         // Last, nothing connected: where the website's video flips the switch.
         // After every other shot, as reconnecting would restart the graph.
@@ -586,6 +627,7 @@ impl Ui {
             Ok(tunnels) => {
                 glib::spawn_future_local(self.clone().check_network());
                 self.detect_failed_connections(&tunnels);
+                self.log_changes(&tunnels);
                 self.detect_drops(&tunnels);
                 self.apply_ipv6_guard(&nm, &tunnels).await;
                 // Rebuilding the rows makes the list jump: only do it on real changes.
@@ -708,6 +750,47 @@ impl Ui {
         }
     }
 
+    /// Writes what changed to the logs of each tunnel.
+    fn log_changes(&self, tunnels: &[Tunnel]) {
+        let old = self.tunnels.borrow();
+        let mut events = self.events.borrow_mut();
+        for tunnel in tunnels {
+            let Some(before) = old.iter().find(|o| o.uuid == tunnel.uuid) else {
+                continue;
+            };
+            if before.state == tunnel.state {
+                continue;
+            }
+            match tunnel.state {
+                TunnelState::Connecting => {
+                    self.end_reason.borrow_mut().take();
+                    events.push(&tunnel.uuid, Severity::Info, gettext("Connecting…"));
+                }
+                TunnelState::Connected => {
+                    events.push(&tunnel.uuid, Severity::Info, gettext("Connected"));
+                }
+                TunnelState::Disconnecting => {
+                    events.push(&tunnel.uuid, Severity::Info, gettext("Disconnecting…"));
+                }
+                TunnelState::Disconnected => {
+                    let (severity, text) = match self.end_reason.borrow_mut().take() {
+                        Some(reason) => (
+                            Severity::Error,
+                            gettext("Disconnected: {reason}").replace("{reason}", &reason),
+                        ),
+                        None if before.state == TunnelState::Connected
+                            && !self.user_stopped.borrow().contains(&tunnel.uuid) =>
+                        {
+                            (Severity::Warning, gettext("Disconnected"))
+                        }
+                        None => (Severity::Info, gettext("Disconnected")),
+                    };
+                    events.push(&tunnel.uuid, severity, text);
+                }
+            }
+        }
+    }
+
     fn detect_drops(&self, tunnels: &[Tunnel]) {
         let old = self.tunnels.borrow();
         let busy = self.busy.borrow();
@@ -753,9 +836,27 @@ impl Ui {
                 TunnelState::Disconnected if !busy.contains(&tunnel.uuid) => {
                     expecting.remove(&tunnel.uuid);
                     glib::g_warning!(LOG_DOMAIN, "Activation of “{}” failed", tunnel.name);
-                    self.toast(
-                        &gettext("Could not connect to “{name}”. Check the server address and your keys.")
-                            .replace("{name}", &tunnel.name),
+                    let text = match self.end_reason.borrow_mut().take() {
+                        Some(reason) => {
+                            gettext("Could not connect: {reason}").replace("{reason}", &reason)
+                        }
+                        None => gettext("Could not connect"),
+                    };
+                    self.events
+                        .borrow_mut()
+                        .push(&tunnel.uuid, Severity::Error, text);
+                    self.toasts.add_toast(
+                        adw::Toast::builder()
+                            .title(
+                                gettext("Could not connect to “{name}”. Check the server address and your keys.")
+                                    .replace("{name}", &tunnel.name),
+                            )
+                            .use_markup(false)
+                            .button_label(gettext("View _Logs"))
+                            .action_name("win.show-logs")
+                            .action_target(&tunnel.uuid.to_variant())
+                            .timeout(8)
+                            .build(),
                     );
                 }
                 _ => {}
@@ -1282,9 +1383,12 @@ impl Ui {
         row.add_suffix(&switch);
         row.set_activatable_widget(Some(&switch));
 
-        // One "share" button with a small menu keeps three icons per row.
+        // One button with a small menu keeps three icons per row.
         let uuid = tunnel.uuid.to_variant();
         let menu = gio::Menu::new();
+        let item = gio::MenuItem::new(Some(&gettext("View Logs")), None);
+        item.set_action_and_target_value(Some("win.show-logs"), Some(&uuid));
+        menu.append_item(&item);
         let item = gio::MenuItem::new(Some(&gettext("Export as File…")), None);
         item.set_action_and_target_value(Some("win.export-tunnel"), Some(&uuid));
         menu.append_item(&item);
@@ -1293,16 +1397,16 @@ impl Ui {
             item.set_action_and_target_value(Some("win.show-qr"), Some(&uuid));
             menu.append_item(&item);
         }
-        let share = gtk::MenuButton::builder()
-            .icon_name("send-to-symbolic")
-            .tooltip_text(gettext("Share"))
+        // Stays available while connecting: that is when logs matter most.
+        let more = gtk::MenuButton::builder()
+            .icon_name("view-more-symbolic")
+            .tooltip_text(gettext("More"))
             .valign(gtk::Align::Center)
             .css_classes(["flat"])
             .menu_model(&menu)
-            .sensitive(!in_flight)
             .build();
-        clickable(&share);
-        row.add_suffix(&share);
+        clickable(&more);
+        row.add_suffix(&more);
 
         let edit = gtk::Button::builder()
             .icon_name("document-edit-symbolic")
@@ -1584,6 +1688,7 @@ impl Ui {
         filters.append(&filter);
         let dialog = gtk::FileDialog::builder()
             .title(gettext("Import VPN Configuration"))
+            .initial_folder(&share::start_folder())
             .filters(&filters)
             .modal(true)
             .build();
@@ -2147,7 +2252,7 @@ fn read_companion(
 }
 
 /// A shell command with a copy button, for dialogs that explain one.
-fn command_box(command: &'static str) -> gtk::Box {
+pub fn command_box(command: &'static str) -> gtk::Box {
     let label = gtk::Label::builder()
         .label(command)
         .css_classes(["monospace"])

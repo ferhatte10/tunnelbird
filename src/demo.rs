@@ -17,10 +17,12 @@ use std::time::Instant;
 
 use adw::prelude::*;
 use base64::Engine;
+use gettextrs::gettext;
 use gtk::{gio, glib};
 
 use crate::config::{self, WgConfig};
 use crate::geo::Location;
+use crate::logs::{Events, Severity, Source};
 use crate::nm::{Tunnel, TunnelState};
 use crate::profile::Kind;
 use crate::settings::{Settings, Style};
@@ -145,6 +147,50 @@ pub fn tunnels() -> Vec<Tunnel> {
             }
         })
         .collect()
+}
+
+/// What the logs show for the connected tunnel: a first attempt that failed,
+/// then the connection. Each line is (minutes ago, source, severity, text).
+pub fn fill_logs(events: &mut Events) {
+    use Severity::{Error, Info, Warning};
+    use Source::{App, NetworkManager as Nm};
+    let now = glib::real_time();
+    let failed = gettext("Could not connect: {reason}")
+        .replace("{reason}", &gettext("the server did not answer in time"));
+    let lines = [
+        (42, App, Info, gettext("Connecting…")),
+        (
+            41,
+            Nm,
+            Warning,
+            "device (amsterdam): no answer from 198.51.100.24:51820".to_owned(),
+        ),
+        (41, App, Error, failed),
+        (12, App, Info, gettext("Connecting…")),
+        (
+            12,
+            Nm,
+            Info,
+            "device (amsterdam): state change: config -> ip-config (reason 'none')".to_owned(),
+        ),
+        (
+            12,
+            Nm,
+            Info,
+            "policy: set 'Amsterdam' (amsterdam) as default for IPv4 routing and DNS".to_owned(),
+        ),
+        (
+            12,
+            Nm,
+            Info,
+            "device (amsterdam): Activation: successful, device activated.".to_owned(),
+        ),
+        (12, App, Info, gettext("Connected")),
+    ];
+    for (minutes, source, severity, text) in lines {
+        let time = now - i64::from(minutes) * 60_000_000;
+        events.push_at(CONNECTED, time, source, severity, text);
+    }
 }
 
 pub fn location() -> Location {
