@@ -469,67 +469,92 @@ impl Ui {
             }
         };
 
+        // Every screen in the light theme, then again in the dark one
+        // (`-dark` names): the store, the website and its videos use both.
         settle(3000).await;
-        shot("main").await;
+        for (scheme, suffix) in [
+            (adw::ColorScheme::ForceLight, ""),
+            (adw::ColorScheme::ForceDark, "-dark"),
+        ] {
+            adw::StyleManager::default().set_color_scheme(scheme);
+            settle(1500).await;
+            shot(&format!("main{suffix}")).await;
 
-        // The whole tunnel list, scrolled to the bottom.
-        let scrolled = self
-            .stack
-            .child_by_name("list")
-            .and_downcast::<gtk::ScrolledWindow>();
-        if let Some(scrolled) = &scrolled {
-            let adjustment = scrolled.vadjustment();
-            adjustment.set_value(adjustment.upper() - adjustment.page_size());
+            // The whole tunnel list, scrolled to the bottom.
+            let scrolled = self
+                .stack
+                .child_by_name("list")
+                .and_downcast::<gtk::ScrolledWindow>();
+            if let Some(scrolled) = &scrolled {
+                let adjustment = scrolled.vadjustment();
+                adjustment.set_value(adjustment.upper() - adjustment.page_size());
+            }
+            settle(800).await;
+            shot(&format!("tunnels{suffix}")).await;
+            if let Some(scrolled) = &scrolled {
+                scrolled.vadjustment().set_value(0.0);
+            }
+
+            let window = self.window.clone();
+            glib::spawn_future_local(async move {
+                let profile = Profile::WireGuard(demo::config(false));
+                editor::run(&window, editor::Mode::Import, "home-server", &profile, None).await;
+            });
+            settle(1200).await;
+            shot(&format!("import{suffix}")).await;
+            close_dialog();
+            settle(800).await;
+
+            let window = self.window.clone();
+            glib::spawn_future_local(async move {
+                let profile = Profile::OpenVpn(Box::new(demo::ovpn_config()));
+                editor::run(&window, editor::Mode::Import, "office", &profile, None).await;
+            });
+            settle(1200).await;
+            shot(&format!("import-openvpn{suffix}")).await;
+            close_dialog();
+            settle(800).await;
+
+            self.app.activate_action("preferences", None);
+            settle(1200).await;
+            if let Some(prefs) = self
+                .window
+                .visible_dialog()
+                .and_downcast::<adw::PreferencesDialog>()
+            {
+                prefs.set_visible_page_name("connection");
+            }
+            settle(800).await;
+            shot(&format!("trusted-networks{suffix}")).await;
+            close_dialog();
+            settle(800).await;
+
+            share::show_qr(&self.window, "Amsterdam", &demo::config(true));
+            settle(1200).await;
+            shot(&format!("qr-code{suffix}")).await;
+            close_dialog();
+            settle(800).await;
         }
-        settle(800).await;
-        shot("tunnels").await;
-        if let Some(scrolled) = &scrolled {
-            scrolled.vadjustment().set_value(0.0);
+        // Last, nothing connected: where the website's video flips the switch.
+        // After every other shot, as reconnecting would restart the graph.
+        let idle = demo::tunnels()
+            .into_iter()
+            .map(|mut tunnel| {
+                tunnel.state = TunnelState::Disconnected;
+                tunnel.active_path = None;
+                tunnel
+            })
+            .collect();
+        *self.tunnels.borrow_mut() = idle;
+        self.render();
+        for (scheme, suffix) in [
+            (adw::ColorScheme::ForceLight, ""),
+            (adw::ColorScheme::ForceDark, "-dark"),
+        ] {
+            adw::StyleManager::default().set_color_scheme(scheme);
+            settle(1500).await;
+            shot(&format!("idle{suffix}")).await;
         }
-
-        let window = self.window.clone();
-        glib::spawn_future_local(async move {
-            let profile = Profile::WireGuard(demo::config(false));
-            editor::run(&window, editor::Mode::Import, "home-server", &profile, None).await;
-        });
-        settle(1200).await;
-        shot("import").await;
-        close_dialog();
-        settle(800).await;
-
-        let window = self.window.clone();
-        glib::spawn_future_local(async move {
-            let profile = Profile::OpenVpn(Box::new(demo::ovpn_config()));
-            editor::run(&window, editor::Mode::Import, "office", &profile, None).await;
-        });
-        settle(1200).await;
-        shot("import-openvpn").await;
-        close_dialog();
-        settle(800).await;
-
-        self.app.activate_action("preferences", None);
-        settle(1200).await;
-        if let Some(prefs) = self
-            .window
-            .visible_dialog()
-            .and_downcast::<adw::PreferencesDialog>()
-        {
-            prefs.set_visible_page_name("connection");
-        }
-        settle(800).await;
-        shot("trusted-networks").await;
-        close_dialog();
-        settle(800).await;
-
-        share::show_qr(&self.window, "Amsterdam", &demo::config(true));
-        settle(1200).await;
-        shot("qr-code").await;
-        close_dialog();
-        settle(800).await;
-
-        adw::StyleManager::default().set_color_scheme(adw::ColorScheme::ForceDark);
-        settle(1500).await;
-        shot("main-dark").await;
         self.app.quit();
     }
 
@@ -1168,6 +1193,13 @@ impl Ui {
     }
 
     fn lookup_location(self: &Rc<Self>, uuid: String) {
+        // Demo mode never asks the network: screenshots must show the made-up
+        // location, never the real address of the computer taking them.
+        if demo::enabled() {
+            *self.geo.borrow_mut() = GeoState::Ready(uuid, demo::location());
+            self.render_live();
+            return;
+        }
         *self.geo.borrow_mut() = GeoState::Loading(uuid.clone());
         self.render_live();
         let ui = self.clone();
