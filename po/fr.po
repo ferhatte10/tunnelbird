@@ -696,3 +696,81 @@ msgstr "Le profil fait référence au fichier « {file} », introuvable. Sélect
 
 msgid "Not included"
 msgstr "Non inclus"
+
+msgid "View Logs"
+msgstr "Voir les journaux"
+
+msgid "View _Logs"
+msgstr "Voir les _journaux"
+
+msgid "More"
+msgstr "Plus"
+
+msgid "Logs"
+msgstr "Journaux"
+
+msgid "Copy Logs"
+msgstr "Copier les journaux"
+
+msgid "No Events Yet"
+msgstr "Aucun événement pour l’instant"
+
+msgid "Events appear here as soon as this tunnel connects."
+msgstr "Les événements s’affichent ici dès que ce tunnel se connecte."
+
+msgid "Error"
+msgstr "Erreur"
+
+msgid "Warning"
+msgstr "Attention"
+
+msgid "Disconnected: {reason}"
+msgstr "Déconnecté : {reason}"
+
+msgid "Could not connect: {reason}"
+msgstr "Connexion impossible : {reason}"
+
+msgid "Could not connect"
+msgstr "Connexion impossible"
+
+msgid "the network connection was lost"
+msgstr "la connexion au réseau a été perdue"
+
+msgid "the VPN service stopped"
+msgstr "le service VPN s’est arrêté"
+
+msgid "the server sent an invalid network configuration"
+msgstr "le serveur a envoyé une configuration réseau non valide"
+
+msgid "the server did not answer in time"
+msgstr "le serveur n’a pas répondu à temps"
+
+msgid "the VPN service could not start"
+msgstr "le service VPN n’a pas pu démarrer"
+
+msgid "a password or key is missing"
+msgstr "il manque un mot de passe ou une clé"
+
+msgid "the login was refused"
+msgstr "la connexion a été refusée par le serveur"
+
+msgid "the network interface could not be set up"
+msgstr "l’interface réseau n’a pas pu être préparée"
+
+msgid "Here, Tunnelbird can only show what it saw itself: the app's sandbox has no access to the system journal. For the full log, run this in a terminal:"
+msgstr "Ici, Tunnelbird ne peut montrer que ce qu’il a vu lui-même : le bac à sable de l’application n’a pas accès au journal du système. Pour le journal complet, lancez ceci dans un terminal :"
+
+msgid "Here, Tunnelbird can only show what it saw itself: your account may not read the system journal. To allow it, run this in a terminal, then log in again:"
+msgstr "Ici, Tunnelbird ne peut montrer que ce qu’il a vu lui-même : votre compte n’a pas le droit de lire le journal du système. Pour l’autoriser, lancez ceci dans un terminal, puis reconnectez-vous :"
+
+msgid "Problems Only"
+msgstr "Problèmes uniquement"
+
+msgid "Save Logs"
+msgstr "Enregistrer les journaux"
+
+msgid "No Problems"
+msgstr "Aucun problème"
+
+msgid "Nothing went wrong on this tunnel."
+msgstr "Aucun problème sur ce tunnel."
