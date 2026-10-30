@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { RELEASES } from '#lib/links.js';
+	import { AVAILABLE, RELEASES } from '#lib/links.js';
 	import CommandBox from '#lib/components/CommandBox.svelte';
 	import InstallTabs from '#lib/components/InstallTabs.svelte';
 	import PageTitle from '#lib/components/PageTitle.svelte';
@@ -29,9 +29,14 @@ sudo snap connect tunnelbird:network-observe`;
 </script>
 
 <div class="mx-auto max-w-[52rem] px-5 pb-24 md:px-8">
-	<PageTitle title={m.install_page_title()} lead={m.install_page_lead()} tab={m.nav_install()} />
+	<PageTitle
+		title={m.install_page_title()}
+		lead={AVAILABLE ? m.install_page_lead() : m.install_soon_lead()}
+		tab={m.nav_install()}
+	/>
 	<InstallTabs />
 
+	{#if AVAILABLE}
 	<h2 id="steps" class="mt-16 mb-2 text-[1.75rem] font-extrabold">{m.steps_title()}</h2>
 	<p class="m-0 mb-6 text-text-2">{m.steps_lead()}</p>
 	<div class="flex flex-col gap-6">
@@ -42,9 +47,12 @@ sudo snap connect tunnelbird:network-observe`;
 		<CommandBox command={sourceDnf} label="{m.steps_source_deps()} · {m.tab_dnf()}" />
 	</div>
 
+	{/if}
+
 	<h2 class="mt-16 mb-2 text-[1.75rem] font-extrabold">{m.requirements_title()}</h2>
 	<p class="m-0 text-text-2">{m.requirements_text()}</p>
 
+	{#if AVAILABLE}
 	<h2 class="mt-16 mb-2 text-[1.75rem] font-extrabold">{m.download_title()}</h2>
 	<p class="m-0 text-text-2">{m.download_text()} <a href={RELEASES}>{m.download_link()}</a>.</p>
 
@@ -55,4 +63,5 @@ sudo snap connect tunnelbird:network-observe`;
 			<CommandBox command={item.command} label={item.label()} />
 		{/each}
 	</div>
+	{/if}
 </div>

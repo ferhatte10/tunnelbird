@@ -2,7 +2,7 @@
 	import { Tabs } from 'bits-ui';
 	import { m } from '#lib/paraglide/messages.js';
 	import { localizeHref } from '#lib/paraglide/runtime.js';
-	import { COMMANDS, GITHUB, INSTALL_SCRIPT_SOURCE, type Method } from '#lib/links.js';
+	import { AVAILABLE, COMMANDS, GITHUB, INSTALL_SCRIPT_SOURCE, type Method } from '#lib/links.js';
 	import CommandBox from './CommandBox.svelte';
 
 	const methods: { id: Method; label: () => string; text: () => string }[] = [
@@ -32,19 +32,21 @@
 	{#each methods as method (method.id)}
 		{@const command = COMMANDS[method.id]}
 		<Tabs.Content value={method.id} class="tab-panel flex flex-col gap-4">
-			{#if command}
+			{#if command && AVAILABLE}
 				<p class="m-0 text-text-2">{method.text()}</p>
 				<CommandBox {command} />
 			{:else}
 				<p class="m-0 font-display text-xl font-semibold">{m.tab_soon_title()}</p>
 				<p class="m-0 text-text-2">{method.text()}</p>
-				<p class="m-0"><a href={GITHUB}>{m.tab_soon_follow()}</a></p>
+				{#if AVAILABLE}<p class="m-0"><a href={GITHUB}>{m.tab_soon_follow()}</a></p>{/if}
 			{/if}
 		</Tabs.Content>
 	{/each}
 	<p class="m-0 text-[0.85rem] text-text-3">
-		<a href={INSTALL_SCRIPT_SOURCE}>{m.install_links_script()}</a> ·
-		<a href={localizeHref('/install/') + '#steps'}>{m.install_links_steps()}</a> ·
+		{#if AVAILABLE}
+			<a href={INSTALL_SCRIPT_SOURCE}>{m.install_links_script()}</a> ·
+			<a href={localizeHref('/install/') + '#steps'}>{m.install_links_steps()}</a> ·
+		{/if}
 		<a href={localizeHref('/compatibility/')}>{m.install_links_compat()}</a>
 	</p>
 </Tabs.Root>
