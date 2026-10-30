@@ -23,7 +23,7 @@
 		{#each methods as method (method.id)}
 			<Tabs.Trigger
 				value={method.id}
-				class="min-h-11 rounded-full bg-surface px-[1.1rem] text-[0.9rem] font-bold text-text transition-colors hover:text-link data-[state=active]:bg-tab-on-bg data-[state=active]:text-tab-on-fg"
+				class="press min-h-11 rounded-full bg-surface px-[1.1rem] text-[0.9rem] font-bold text-text hover:text-link data-[state=active]:bg-tab-on-bg data-[state=active]:text-tab-on-fg"
 			>
 				{method.label()}
 			</Tabs.Trigger>
@@ -31,7 +31,7 @@
 	</Tabs.List>
 	{#each methods as method (method.id)}
 		{@const command = COMMANDS[method.id]}
-		<Tabs.Content value={method.id} class="flex flex-col gap-4">
+		<Tabs.Content value={method.id} class="tab-panel flex flex-col gap-4">
 			{#if command}
 				<p class="m-0 text-text-2">{method.text()}</p>
 				<CommandBox {command} />

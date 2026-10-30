@@ -1,7 +1,17 @@
 import { deLocalizeHref, localizeHref, type Locale } from '#lib/paraglide/runtime.js';
 
-/** Each language under its own name: found whatever the page's language. */
-export const LANGUAGE_NAMES: Record<Locale, string> = { en: 'English', fr: 'Français' };
+/**
+ * A language under its own name ("English", "Français", "Deutsch"), found
+ * whatever the page's language. From the browser's own data: a new language
+ * needs no label here.
+ */
+export function nativeName(locale: Locale): string {
+	const name = new Intl.DisplayNames([locale], { type: 'language' }).of(locale) ?? locale;
+	return name.charAt(0).toLocaleUpperCase(locale) + name.slice(1);
+}
+
+/** Up to this many languages, phones show them side by side; beyond, a list. */
+export const SIDE_BY_SIDE = 3;
 
 /**
  * The same page in another language. Always open it as a new document
