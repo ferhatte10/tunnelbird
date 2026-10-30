@@ -2,3 +2,4 @@
 /build-flatpak
 /.flatpak-builder
 /repo
+/brag-output*/

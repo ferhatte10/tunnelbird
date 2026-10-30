@@ -34,14 +34,14 @@
 	<div class="flex items-center gap-2 rounded-2xl bg-code-bg py-1.5 pr-1.5 pl-4">
 		<code
 			bind:this={code}
-			class="min-w-0 flex-1 py-2.5 font-mono text-[0.85rem] leading-relaxed [overflow-wrap:anywhere] whitespace-pre-wrap text-code-text"
+			class="min-w-0 flex-1 overflow-x-auto py-2.5 pr-3 font-mono text-[0.85rem] leading-relaxed whitespace-pre text-code-text [mask-image:linear-gradient(to_right,#000_calc(100%-1.5rem),transparent)] [scrollbar-width:none]"
 			>{command}</code
 		>
 		<button
 			type="button"
 			onclick={copy}
 			aria-label={m.copy_label()}
-			class="inline-flex h-11 min-w-11 flex-none items-center justify-center gap-2 rounded-xl bg-accent px-4 text-[0.85rem] font-bold text-on-accent transition-colors hover:bg-accent-hover"
+			class="press inline-flex h-11 min-w-11 flex-none items-center justify-center gap-2 rounded-xl bg-accent px-4 text-[0.85rem] font-bold text-on-accent hover:bg-accent-hover"
 		>
 			{#if status === 'copied'}
 				<Check class="size-4" aria-hidden="true" />

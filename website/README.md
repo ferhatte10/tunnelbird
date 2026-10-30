@@ -35,5 +35,20 @@ files for a year) and `nginx/security-headers.conf` the headers sent with
 every answer. `.github/workflows/website.yml` builds, scans (Trivy), serves and
 tests this image on each pull request, and publishes it to GHCR from `main`.
 
+## The app's film
+
+`static/videos/{en,fr}-{dark,light}[-portrait].{mp4,jpg}` (shown by
+`DemoVideo.svelte`: 16:9 from 48rem, 4:5 `-portrait` on phones) come from two
+HyperFrames compositions made with the brag skill, kept outside the
+repository in `../brag-output-*/` (`composition/` 1920x1080 and
+`composition-portrait/` 1080x1350, masters with sound in `renders/`,
+`brag.mp4` to share). It uses the app's demo screenshots only
+(`make screenshots`, fictional data). To update it: refresh the screenshots,
+copy them into `composition/assets/shots/`, run `npx hyperframes check`, then
+`npx hyperframes render --batch ../rows.json --output "../renders/{lang}-{theme}.mp4"`,
+(the same with `-portrait` from `composition-portrait/`), and encode the web
+copies (1280x720 or 864x1080, no sound, H.264 CRF 26, `+faststart`, poster
+at 11.8 s).
+
 Keep the compatibility page in step with `../docs/COMPATIBILITY.md`, the
 source of truth.

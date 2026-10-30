@@ -1,18 +1,40 @@
 <script lang="ts">
 	import '../app.css';
+	import { onNavigate } from '$app/navigation';
 	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
 	import { deLocalizeHref, localizeHref, locales } from '#lib/paraglide/runtime.js';
 	import Header from '#lib/components/Header.svelte';
 	import Footer from '#lib/components/Footer.svelte';
+	import displayFont from '@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2?url';
+	import textFont from '@fontsource/atkinson-hyperlegible/files/atkinson-hyperlegible-latin-400-normal.woff2?url';
+	import textBoldFont from '@fontsource/atkinson-hyperlegible/files/atkinson-hyperlegible-latin-700-normal.woff2?url';
 
 	let { children } = $props();
+
+	// Pages fade through each other (DESIGN.md, Motion; styles in app.css).
+	onNavigate((navigation) => {
+		if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+			return;
+		}
+		return new Promise((resolve) => {
+			document.startViewTransition(async () => {
+				resolve();
+				await navigation.complete;
+			});
+		});
+	});
 
 	const origin = 'https://tunnelbird.ferhatsn.fr';
 	const path = $derived(deLocalizeHref(page.url.pathname));
 </script>
 
 <svelte:head>
+	<!-- Fetched with the page, not after the stylesheet: the first paint
+	     already has the site's fonts, nothing swaps a moment later. -->
+	{#each [displayFont, textFont, textBoldFont] as font (font)}
+		<link rel="preload" href={font} as="font" type="font/woff2" crossorigin="anonymous" />
+	{/each}
 	<meta name="description" content={m.site_description()} />
 	<link rel="canonical" href={origin + localizeHref(path)} />
 	{#each locales as locale (locale)}
