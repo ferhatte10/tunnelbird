@@ -6,6 +6,7 @@
 	import { deLocalizeHref, localizeHref, locales } from '#lib/paraglide/runtime.js';
 	import Header from '#lib/components/Header.svelte';
 	import Footer from '#lib/components/Footer.svelte';
+	import { versioned } from '#lib/assets.js';
 	import displayFont from '@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2?url';
 	import textFont from '@fontsource/atkinson-hyperlegible/files/atkinson-hyperlegible-latin-400-normal.woff2?url';
 	import textBoldFont from '@fontsource/atkinson-hyperlegible/files/atkinson-hyperlegible-latin-700-normal.woff2?url';
@@ -18,10 +19,13 @@
 			return;
 		}
 		return new Promise((resolve) => {
-			document.startViewTransition(async () => {
+			const transition = document.startViewTransition(async () => {
 				resolve();
-				await navigation.complete;
+				// Aborted by a newer click: that navigation brings its own transition.
+				await navigation.complete.catch(() => {});
 			});
+			// Skipped (page in the background, another click): nothing to animate.
+			transition.ready.catch(() => {});
 		});
 	});
 
@@ -41,7 +45,7 @@
 		<link rel="alternate" hreflang={locale} href={origin + localizeHref(path, { locale })} />
 	{/each}
 	<meta property="og:site_name" content="Tunnelbird" />
-	<meta property="og:image" content={origin + '/screenshots/en/main.png'} />
+	<meta property="og:image" content={origin + versioned('/screenshots/en/main.png')} />
 </svelte:head>
 
 <a
