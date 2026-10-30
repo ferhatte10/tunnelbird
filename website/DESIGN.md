@@ -81,7 +81,10 @@ alone. Tokens in `src/app.css` (`--ease-out`, `--motion-fast` 160 ms,
 - Languages: each under its own name (`Intl.DisplayNames`, no labels to
   write); phones show up to 3 side by side in the menu, more as a list that
   scrolls; the desktop menu scrolls past its height. Changing language loads
-  the page (see `src/lib/language.ts`).
+  the page (see `src/lib/language.ts`). First visit of `/`: a browser whose
+  first language is French opens `/fr/`, any other stays in English
+  (`static/language.js`, before the first paint); a language chosen in the
+  menu wins, kept in the browser like the theme (no cookie).
 - French text: no-break space before `: ; ? !` and inside `« »`.
 - No legal or trademark notice; WireGuard® only as a tunnel type.
 - Windows and macOS are “coming soon”, honestly: no fake download.

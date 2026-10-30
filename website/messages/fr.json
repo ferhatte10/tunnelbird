@@ -120,7 +120,7 @@
 	"privacy_app_3": "Une fois par jour, les installations par paquet demandent à ce site le numéro de la dernière version. Rien sur vous n’est envoyé, et les Préférences permettent de le désactiver. Les installations Flatpak et Snap laissent cela à leur boutique.",
 	"privacy_app_4": "Vos tunnels et vos clés restent dans les réglages réseau du système, lisibles par le système seulement.",
 	"privacy_site_title": "Ce site",
-	"privacy_site_text": "Sans cookies, sans statistiques, sans contenu tiers : polices et images viennent de ce site. Votre choix de thème reste dans votre navigateur.",
+	"privacy_site_text": "Sans cookies, sans statistiques, sans contenu tiers : polices et images viennent de ce site. Vos choix de thème et de langue restent dans votre navigateur.",
 	"changes_title": "Nouveautés",
 	"changes_lead": "Toutes les versions de Tunnelbird, de la plus récente à la plus ancienne. Notes de version en anglais.",
 	"changes_version": "Version {version}",

@@ -10,6 +10,18 @@ export function nativeName(locale: Locale): string {
 	return name.charAt(0).toLocaleUpperCase(locale) + name.slice(1);
 }
 
+/**
+ * Remembers a language chosen in the menu, so the home page opens in it
+ * from then on (`static/language.js`). In this browser only, like the theme.
+ */
+export function rememberLanguage(locale: Locale) {
+	try {
+		localStorage.setItem('language', locale);
+	} catch {
+		// Storage refused (private browsing): the choice lasts for this visit.
+	}
+}
+
 /** Up to this many languages, phones show them side by side; beyond, a list. */
 export const SIDE_BY_SIDE = 3;
 
