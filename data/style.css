@@ -25,3 +25,29 @@ banner.tunnel-error > revealer > widget label {
 .command {
   padding: 6px 6px 6px 12px;
 }
+
+/* Logs of a tunnel: one row per line, problems tinted with the style's colours. */
+.log-list > row {
+  padding: 0;
+}
+
+.log-entry {
+  padding: 8px 12px;
+}
+
+.log-entry.log-warning {
+  background-color: alpha(@warning_bg_color, 0.12);
+}
+
+.log-entry.log-error {
+  background-color: alpha(@error_bg_color, 0.12);
+}
+
+/* Stronger than .dim-label: it stays readable on the tinted rows. */
+.log-time {
+  opacity: 0.78;
+}
+
+.log-message {
+  font-size: 0.9em;
+}

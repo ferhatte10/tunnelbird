@@ -40,6 +40,7 @@ NetworkManager over D-Bus and never runs as root. It does not manage servers.
 - `src/nm.rs` — D-Bus proxies and `WgConfig` → NetworkManager settings.
 - `src/geo.rs` — public IP/location lookup (libsoup + serde), flags, country names.
 - `src/traffic.rs` — `/sys` counters and the Cairo graph.
+- `src/logs.rs` — the logs of a tunnel: this app's events and the system journal.
 - `src/window.rs` — UI; all errors go through `Ui::report_error`.
 - `src/settings.rs` / `src/preferences.rs` — preferences file and dialog.
 - `src/tray.rs` — top bar icon + menu (StatusNotifierItem + dbusmenu, own zbus code).

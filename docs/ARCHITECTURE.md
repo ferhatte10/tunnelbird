@@ -43,6 +43,7 @@ stores no secret itself.
 | `src/editor.rs` | Preview before import and editing; validates through `config::parse` | `config`, `share` |
 | `src/share.rs` | Export as `.conf` (mode 0600) and QR code (`qrcode` crate, drawn with Cairo) | `config` |
 | `crates/core/src/trust.rs` | Trusted networks rule: when joining which network connects which tunnel. Unit-tested | — |
+| `src/logs.rs` | The logs of a tunnel: this app's events merged with the system journal (`journalctl --follow`), or a notice when the journal cannot be read. Unit-tested | `nm` |
 | `src/traffic.rs` | Reads interface byte counters, draws the live graph with Cairo | — |
 | `crates/core/src/protocol.rs` | Messages between a native interface and the tunnel service on Windows and macOS (see [PROTOCOL.md](PROTOCOL.md)). Unit-tested | `profile` |
 | `crates/core/src/version.rs` | Version comparison, daily check timing, release notes from the metainfo. Unit-tested | — |
