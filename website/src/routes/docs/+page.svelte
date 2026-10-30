@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
 	import { localizeHref } from '#lib/paraglide/runtime.js';
-	import { ISSUES } from '#lib/links.js';
+	import { AVAILABLE, ISSUES } from '#lib/links.js';
 	import PageTitle from '#lib/components/PageTitle.svelte';
 
 	const sections = [
@@ -37,10 +37,12 @@
 		<ul>
 			<li>{m.docs_trouble_server()}</li>
 			<li>{m.docs_trouble_plugin()}</li>
-			<li>
-				{m.docs_trouble_snap()} (<a href={localizeHref('/install/') + '#steps'}>{m.install_links_steps()}</a>)
-			</li>
-			<li><a href={ISSUES}>{m.docs_trouble_more()}</a></li>
+			{#if AVAILABLE}
+				<li>
+					{m.docs_trouble_snap()} (<a href={localizeHref('/install/') + '#steps'}>{m.install_links_steps()}</a>)
+				</li>
+				<li><a href={ISSUES}>{m.docs_trouble_more()}</a></li>
+			{/if}
 		</ul>
 	</div>
 </div>

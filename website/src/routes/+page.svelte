@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Download, FileCheck, Monitor, QrCode, TrendingUp } from '@lucide/svelte';
+	import { Clock, Download, FileCheck, Monitor, Play, QrCode, TrendingUp } from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { localizeHref } from '#lib/paraglide/runtime.js';
-	import { FLATHUB, INSTALL_COMMAND } from '#lib/links.js';
+	import { AVAILABLE, FLATHUB, INSTALL_COMMAND } from '#lib/links.js';
 	import CommandBox from '#lib/components/CommandBox.svelte';
 	import DemoVideo from '#lib/components/DemoVideo.svelte';
 	import FlightLine from '#lib/components/FlightLine.svelte';
@@ -29,6 +29,7 @@
 			{m.hero_title_1()}<br />{m.hero_title_2()}
 		</h1>
 		<p class="enter m-0 max-w-[34ch] text-text-2 md:text-[1.1rem]" style="--d: 1">{m.hero_lead()}</p>
+		{#if AVAILABLE}
 		<div class="enter" style="--d: 2">
 			<CommandBox command={INSTALL_COMMAND} label={m.hero_install_label()} />
 		</div>
@@ -44,6 +45,26 @@
 				>{m.hero_other()} <a href={localizeHref('/install/')}>{m.hero_other_link()}</a></span
 			>
 		</div>
+		{:else}
+			<div class="enter flex flex-col gap-2" style="--d: 2">
+				<p class="m-0 flex items-center gap-2 font-bold text-link">
+					<Clock class="size-5" aria-hidden="true" />{m.tab_soon_title()}
+				</p>
+				<p class="m-0 max-w-[40ch] text-text-2">{m.hero_soon_text()}</p>
+			</div>
+			<div class="enter flex flex-wrap items-center gap-x-5 gap-y-3" style="--d: 3">
+				<a
+					href="#film"
+					class="press inline-flex min-h-12 items-center gap-2.5 rounded-xl bg-surface px-5 font-bold text-text no-underline hover:text-link"
+				>
+					<Play class="size-5" aria-hidden="true" />
+					{m.hero_soon_film()}
+				</a>
+				<span class="text-[0.85rem] text-text-3"
+					>{m.hero_other()} <a href={localizeHref('/compatibility/')}>{m.hero_soon_compat()}</a></span
+				>
+			</div>
+		{/if}
 	</div>
 	<div class="enter-settle relative min-w-0 flex-[1_1_24rem]" style="--d: 2">
 		<FlightLine />
@@ -51,7 +72,7 @@
 	</div>
 </section>
 
-<section class="container-site flex flex-col gap-5 pb-24">
+<section id="film" class="container-site flex scroll-mt-6 flex-col gap-5 pb-24">
 	<h2
 		use:reveal
 		class="m-0 flex items-center gap-3.5 text-[clamp(1.9rem,4vw,2.5rem)] leading-tight font-extrabold"

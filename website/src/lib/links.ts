@@ -1,5 +1,12 @@
 // Addresses used across the site, in one place.
 
+/**
+ * False until the first release: packages, signed repositories and Flathub
+ * exist, and the source repository is public. Until then every install
+ * command and every GitHub link waits, and the site says “coming soon”.
+ */
+export const AVAILABLE = false;
+
 export const GITHUB = 'https://github.com/ferhatte10/tunnelbird';
 export const RELEASES = `${GITHUB}/releases`;
 export const ISSUES = `${GITHUB}/issues`;
