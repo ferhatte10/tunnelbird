@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
 	import { deLocalizeHref, getLocale, locales, localizeHref } from '#lib/paraglide/runtime.js';
-	import { SIDE_BY_SIDE, languageHref, nativeName } from '#lib/language.js';
+	import { SIDE_BY_SIDE, languageHref, nativeName, rememberLanguage } from '#lib/language.js';
 	import LanguageMenu from './LanguageMenu.svelte';
 	import ThemeToggle from './ThemeToggle.svelte';
 
@@ -101,6 +101,7 @@
 							<a
 								href={languageHref(page.url, locale)}
 								data-sveltekit-reload
+								onclick={() => rememberLanguage(locale)}
 								hreflang={locale}
 								lang={locale}
 								aria-current={current ? 'true' : undefined}
@@ -120,6 +121,7 @@
 							<a
 								href={languageHref(page.url, locale)}
 								data-sveltekit-reload
+								onclick={() => rememberLanguage(locale)}
 								hreflang={locale}
 								lang={locale}
 								aria-current={current ? 'true' : undefined}

@@ -4,13 +4,15 @@
 	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale, locales, type Locale } from '#lib/paraglide/runtime.js';
-	import { languageHref, nativeName } from '#lib/language.js';
+	import { languageHref, nativeName, rememberLanguage } from '#lib/language.js';
 
 	const current = getLocale();
 
 	// A new document, not a client-side navigation (see language.ts).
 	function choose(locale: string) {
-		if (locale !== current) window.location.assign(languageHref(page.url, locale as Locale));
+		if (locale === current) return;
+		rememberLanguage(locale as Locale);
+		window.location.assign(languageHref(page.url, locale as Locale));
 	}
 </script>
 
