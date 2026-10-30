@@ -40,6 +40,7 @@ const pairs = [
 	['text-3', 'bg-alt', 4.5],
 	['link', 'bg', 4.5],
 	['link', 'bg-alt', 4.5],
+	['link', 'surface', 4.5],
 	['text', 'surface', 4.5],
 	['text-2', 'surface', 4.5],
 	['code-text', 'code-bg', 4.5],
@@ -47,6 +48,7 @@ const pairs = [
 	['on-accent', 'accent-hover', 4.5],
 	['tab-on-fg', 'tab-on-bg', 4.5],
 	['icon', 'bg', 3],
+	['icon', 'bg-alt', 3],
 	['mark-red', 'bg', 3]
 ];
 

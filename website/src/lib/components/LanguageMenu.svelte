@@ -4,7 +4,7 @@
 	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale, locales, type Locale } from '#lib/paraglide/runtime.js';
-	import { LANGUAGE_NAMES, languageHref } from '#lib/language.js';
+	import { languageHref, nativeName } from '#lib/language.js';
 
 	const current = getLocale();
 
@@ -16,8 +16,8 @@
 
 <DropdownMenu.Root>
 	<DropdownMenu.Trigger
-		aria-label={m.language_choose({ language: LANGUAGE_NAMES[current] })}
-		class="inline-flex h-11 items-center gap-1.5 rounded-xl bg-surface px-3 text-text transition-colors hover:text-link"
+		aria-label={m.language_choose({ language: nativeName(current) })}
+		class="press inline-flex h-11 items-center gap-1.5 rounded-xl bg-surface px-3 text-text hover:text-link"
 	>
 		<Languages class="size-5" aria-hidden="true" />
 		<span class="text-[0.85rem] font-bold uppercase" aria-hidden="true">{current}</span>
@@ -26,7 +26,7 @@
 		<DropdownMenu.Content
 			align="end"
 			sideOffset={8}
-			class="z-20 min-w-44 rounded-xl border border-border bg-bg-alt p-1.5 shadow-md"
+			class="z-20 max-h-[min(22rem,var(--bits-dropdown-menu-content-available-height))] min-w-44 overflow-y-auto rounded-xl border border-border bg-bg-alt p-1.5 shadow-md"
 		>
 			<DropdownMenu.RadioGroup value={current} onValueChange={choose}>
 				{#each locales as locale (locale)}
@@ -36,7 +36,7 @@
 						class="flex min-h-11 items-center justify-between gap-4 rounded-lg px-3 text-text outline-none data-highlighted:bg-surface"
 					>
 						{#snippet children({ checked })}
-							{LANGUAGE_NAMES[locale]}
+							{nativeName(locale)}
 							{#if checked}<Check class="size-4 text-icon" aria-hidden="true" />{/if}
 						{/snippet}
 					</DropdownMenu.RadioItem>
