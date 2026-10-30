@@ -1,8 +1,10 @@
 <script lang="ts">
-	import { Menu, X } from '@lucide/svelte';
+	import { Check, Languages, Menu, X } from '@lucide/svelte';
 	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
-	import { deLocalizeHref, getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { deLocalizeHref, getLocale, locales, localizeHref } from '#lib/paraglide/runtime.js';
+	import { LANGUAGE_NAMES, languageHref } from '#lib/language.js';
+	import LanguageMenu from './LanguageMenu.svelte';
 	import ThemeToggle from './ThemeToggle.svelte';
 
 	const links = [
@@ -13,7 +15,6 @@
 	];
 
 	const path = $derived(deLocalizeHref(page.url.pathname));
-	const otherLocale = $derived(getLocale() === 'fr' ? 'en' : 'fr');
 
 	// Phone menu: closed again after each navigation.
 	let open = $state(false);
@@ -44,16 +45,12 @@
 					: 'border-transparent text-text-2 hover:text-text'}">{link.label()}</a
 			>
 		{/each}
-		<a
-			href={localizeHref(path, { locale: otherLocale })}
-			hreflang={otherLocale}
-			lang={otherLocale}
-			class="text-text-2 no-underline hover:text-text">{m.other_language()}</a
-		>
+		<LanguageMenu />
 		<ThemeToggle />
 	</nav>
 
-	<!-- Phones: theme button and a menu that unfolds under the header. -->
+	<!-- Phones: theme button and a menu that unfolds under the header, with the
+	     languages at its end (a third button would not fit beside the name). -->
 	<div class="ml-auto flex items-center gap-2 md:hidden">
 		<ThemeToggle />
 		<button
@@ -89,14 +86,30 @@
 						</a>
 					</li>
 				{/each}
-				<li>
-					<a
-						href={localizeHref(path, { locale: otherLocale })}
-						hreflang={otherLocale}
-						lang={otherLocale}
-						class="flex min-h-12 items-center text-[1.05rem] text-text-2 no-underline">{m.other_language()}</a
-					>
-				</li>
+			</ul>
+			<p class="m-0 mt-4 flex items-center gap-2 text-[0.9rem] text-text-2">
+				<Languages class="size-4" aria-hidden="true" />
+				{m.language_label()}
+			</p>
+			<ul class="m-0 flex list-none flex-col p-0">
+				{#each locales as locale (locale)}
+					{@const current = locale === getLocale()}
+					<li class="border-b border-border">
+						<a
+							href={languageHref(page.url, locale)}
+							data-sveltekit-reload
+							hreflang={locale}
+							lang={locale}
+							aria-current={current ? 'true' : undefined}
+							class="flex min-h-12 items-center justify-between text-[1.05rem] no-underline {current
+								? 'font-bold text-text'
+								: 'text-text-2'}"
+						>
+							{LANGUAGE_NAMES[locale]}
+							{#if current}<Check class="size-5 text-icon" aria-hidden="true" />{/if}
+						</a>
+					</li>
+				{/each}
 			</ul>
 		</nav>
 	{/if}
