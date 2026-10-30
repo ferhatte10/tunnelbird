@@ -29,16 +29,19 @@
 		const radius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
 		root.classList.add('theme-switching');
 		const transition = document.startViewTransition(apply);
-		transition.ready.then(() =>
-			root.animate(
-				{ clipPath: [`circle(0 at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
-				{
-					duration: 550,
-					easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
-					pseudoElement: '::view-transition-new(root)'
-				}
+		transition.ready
+			.then(() =>
+				root.animate(
+					{ clipPath: [`circle(0 at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
+					{
+						duration: 550,
+						easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+						pseudoElement: '::view-transition-new(root)'
+					}
+				)
 			)
-		);
+			// Skipped (page in the background): the theme is applied all the same.
+			.catch(() => {});
 		transition.finished.finally(() => root.classList.remove('theme-switching'));
 	}
 </script>
