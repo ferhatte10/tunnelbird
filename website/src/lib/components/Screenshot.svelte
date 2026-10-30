@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getLocale } from '#lib/paraglide/runtime.js';
+	import { versioned } from '#lib/assets.js';
 
 	// A store screenshot in the visitor's language and theme: `<name>.png` and
 	// `<name>-dark.png`, the one not matching the theme hidden. `eager` loads
@@ -17,7 +18,7 @@
 </script>
 
 <img
-	src="{base}/{name}.png"
+	src={versioned(`${base}/${name}.png`)}
 	{alt}
 	width="1412"
 	height="1500"
@@ -25,7 +26,7 @@
 	class="block h-auto w-full dark:hidden {className}"
 />
 <img
-	src="{base}/{name}-dark.png"
+	src={versioned(`${base}/${name}-dark.png`)}
 	{alt}
 	width="1412"
 	height="1500"

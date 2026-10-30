@@ -5,6 +5,7 @@
 	import { Pause, Play } from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
+	import { versioned } from '#lib/assets.js';
 
 	// The 21 s film of the app (brag-output, rendered with HyperFrames), in the
 	// visitor's language and theme, muted, looping; in portrait (4:5) on phones,
@@ -45,7 +46,9 @@
 	});
 
 	const canPlay = $derived(mounted && !prefersReducedMotion.current && !saveData);
-	const src = $derived(`${base}-${dark ? 'dark' : 'light'}${phone.current ? '-portrait' : ''}.mp4`);
+	const src = $derived(
+		versioned(`${base}-${dark ? 'dark' : 'light'}${phone.current ? '-portrait' : ''}.mp4`)
+	);
 	const shouldPlay = $derived(
 		canPlay && (choice ? choice === 'play' : hover.current ? active : visible)
 	);
@@ -87,9 +90,14 @@
 	     JavaScript; the browser fetches only the matching one). -->
 	{#each [{ theme: 'light', cls: 'dark:hidden' }, { theme: 'dark', cls: 'hidden dark:block' }] as poster (poster.theme)}
 		<picture>
-			<source media={PHONE} srcset="{base}-{poster.theme}-portrait.jpg" width="864" height="1080" />
+			<source
+				media={PHONE}
+				srcset={versioned(`${base}-${poster.theme}-portrait.jpg`)}
+				width="864"
+				height="1080"
+			/>
 			<img
-				src="{base}-{poster.theme}.jpg"
+				src={versioned(`${base}-${poster.theme}.jpg`)}
 				alt={m.demo_alt()}
 				width="1280"
 				height="720"
