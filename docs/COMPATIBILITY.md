@@ -113,9 +113,9 @@ with the app installed from its `.dmg` built on that Mac.
 | Service crash | **Tested** | After `kill -9` the next start restores DNS and routes, and launchd restarts it |
 | Service stopped normally, with a tunnel up | Expected | Restores at once; not observed separately |
 | Install from the `.dmg`, from the app | **Tested** | With the administrator's password |
-| “Open Anyway” on a downloaded `.dmg` | Expected | Only tried with a `.dmg` built on the same Mac |
+| “Open Anyway” on a downloaded `.dmg` | **Tested** | With a `.dmg` marked as downloaded: macOS blocks the app, then System Settings › Privacy & Security opens it. Each user goes through it, no paid Apple account |
 | Switch to another interface (Ethernet) | Expected | Written, not run: no cable at hand |
-| Restart of the Mac | Expected | Not run |
+| Restart of the Mac | **Tested** | The service starts by itself; the network is untouched |
 | Start at login, notifications, QR code scanned by a phone, update notice | Expected | Written, not confirmed on a real run |
 
 Distribution on both: an installer from the website, no store, no paid
