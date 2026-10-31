@@ -27,6 +27,11 @@ enum Links {
 private let licenses: [(name: String, file: String)] = [
     ("Tunnelbird", "Tunnelbird"),
     ("BoringTun", "BoringTun"),
+    ("OpenVPN", "OpenVPN"),
+    ("OpenSSL", "OpenSSL"),
+    ("LZO", "LZO"),
+    ("LZ4", "LZ4"),
+    ("pkcs11-helper", "pkcs11-helper"),
 ]
 
 struct AboutView: View {
@@ -93,7 +98,6 @@ struct LicensesSheet: View {
             Picker("Licenses", selection: $selected) {
                 ForEach(licenses, id: \.file) { Text(verbatim: $0.name).tag($0.file) }
             }
-            .pickerStyle(.segmented)
             .labelsHidden()
             ScrollView {
                 Text(text)

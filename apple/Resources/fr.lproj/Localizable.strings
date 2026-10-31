@@ -153,3 +153,14 @@
 "What's New" = "Nouveautés";
 "Disconnect When Quitting" = "Déconnecter en quittant";
 "Once the app is closed, no icon remains to control the VPN" = "Une fois l’app fermée, plus aucune icône ne permet de contrôler le VPN";
+"Cannot install the service" = "Impossible d’installer le service";
+"Install the Service…" = "Installer le service…";
+"Installing…" = "Installation…";
+"macOS asks for the administrator's password, once." = "macOS demande le mot de passe administrateur, une seule fois.";
+"Reinstall the Service…" = "Réinstaller le service…";
+"Remove" = "Retirer";
+"Remove the service?" = "Retirer le service ?";
+"Remove the Service…" = "Retirer le service…";
+"Tunnel Service" = "Service de tunnels";
+"Tunnelbird needs your password once, to install the service that creates the tunnels." = "Tunnelbird a besoin de votre mot de passe une fois, pour installer le service qui crée les tunnels.";
+"Tunnels stop working until it is installed again. Your tunnels are kept." = "Les tunnels ne marchent plus jusqu’à sa réinstallation. Vos tunnels sont conservés.";

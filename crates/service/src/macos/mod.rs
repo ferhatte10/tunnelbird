@@ -356,6 +356,40 @@ pub fn open_socket_to_admins(socket: &std::path::Path) -> std::io::Result<()> {
 /// an ad hoc signature (seen on macOS 27.2), and we have no paid one.
 const INSTALLED_EXE: &str = "/Library/Application Support/Tunnelbird/tunnelbird-service";
 
+/// The folder of OpenVPN and its libraries, under `DATA_DIR` once installed and
+/// next to the service's program in the app.
+const BUNDLED_OPENVPN: &str = "openvpn";
+
+/// Copies what the app carries to where only root can change it: anyone can
+/// write in an app that sits in `/Applications`.
+fn install_openvpn(from: &std::path::Path) -> Result<(), String> {
+    use std::os::unix::fs::PermissionsExt;
+    let target = PathBuf::from(DATA_DIR).join(BUNDLED_OPENVPN);
+    let _ = std::fs::remove_dir_all(&target);
+    if !from.exists() {
+        return Ok(());
+    }
+    let describe =
+        |path: &std::path::Path, err: std::io::Error| format!("{}: {err}", path.display());
+    let lib = target.join("lib");
+    std::fs::create_dir_all(&lib).map_err(|err| describe(&lib, err))?;
+    let copy = |source: PathBuf, destination: PathBuf| -> Result<(), String> {
+        std::fs::copy(&source, &destination).map_err(|err| describe(&source, err))?;
+        std::os::unix::fs::chown(&destination, Some(0), Some(0))
+            .map_err(|err| describe(&destination, err))?;
+        std::fs::set_permissions(&destination, std::fs::Permissions::from_mode(0o755))
+            .map_err(|err| describe(&destination, err))
+    };
+    for name in ["openvpn", "dns-updown"] {
+        copy(from.join(name), target.join(name))?;
+    }
+    let libraries = std::fs::read_dir(from.join("lib")).map_err(|err| describe(from, err))?;
+    for library in libraries.flatten() {
+        copy(library.path(), lib.join(library.file_name()))?;
+    }
+    Ok(())
+}
+
 fn launchd_plist(exe: &str) -> String {
     format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -393,6 +427,9 @@ pub fn install() -> Result<(), String> {
     // of a program by its file, and kills it if the content changed in place.
     let _ = std::fs::remove_file(INSTALLED_EXE);
     std::fs::copy(&exe, INSTALLED_EXE).map_err(|err| format!("{INSTALLED_EXE}: {err}"))?;
+    if let Some(folder) = exe.parent() {
+        install_openvpn(&folder.join(BUNDLED_OPENVPN))?;
+    }
     std::os::unix::fs::chown(INSTALLED_EXE, Some(0), Some(0))
         .map_err(|err| format!("{INSTALLED_EXE}: {err}"))?;
     std::fs::set_permissions(INSTALLED_EXE, std::fs::Permissions::from_mode(0o755))
@@ -415,6 +452,7 @@ pub fn uninstall() -> Result<(), String> {
         .args(["bootout", &format!("system/{LAUNCHD_LABEL}")])
         .status();
     let _ = std::fs::remove_file(INSTALLED_EXE);
+    let _ = std::fs::remove_dir_all(PathBuf::from(DATA_DIR).join(BUNDLED_OPENVPN));
     std::fs::remove_file(&path).map_err(|err| format!("{path}: {err}"))
 }
 

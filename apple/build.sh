@@ -21,6 +21,10 @@ cp -R Resources/en.lproj Resources/fr.lproj "$APP/Contents/Resources/"
 mkdir -p "$APP/Contents/Resources/Licenses"
 cp ../LICENSE "$APP/Contents/Resources/Licenses/Tunnelbird.txt"
 cp ../vendor/boringtun/LICENSE "$APP/Contents/Resources/Licenses/BoringTun.txt"
+# The service, which the app installs with the administrator's password.
+(cd .. && cargo build --release -p tunnelbird-service)
+cp ../target/release/tunnelbird-service "$APP/Contents/Resources/tunnelbird-service"
+./bundle-openvpn.sh "$APP/Contents/Resources"
 # Ad hoc signature: no account needed, and Apple silicon refuses unsigned code.
 codesign --force --sign - "$APP"
 print "Built $APP"

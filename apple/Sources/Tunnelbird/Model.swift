@@ -52,6 +52,7 @@ final class Model: ObservableObject {
     @Published var editedTunnel: Tunnel?
     @Published var qrTunnel: Tunnel?
     @Published var importRequested = false
+    @Published var installing = false
 
     private var connection: ServiceConnection?
     private var last: (date: Date, counters: Counters)?
@@ -389,6 +390,34 @@ final class Model: ObservableObject {
             if logsTunnel?.id == tunnel.id {
                 // Lines that arrived while waiting are in the answer too.
                 logLines = answer?.lines ?? logLines
+            }
+        }
+    }
+
+    /// The service carried by the app, if this build has one.
+    var serviceInApp: URL? {
+        Bundle.main.url(forResource: "tunnelbird-service", withExtension: nil)
+    }
+
+    /// Installs or removes the service: macOS asks the administrator's password.
+    func runServiceAction(_ argument: String) {
+        guard let service = serviceInApp, !installing else { return }
+        installing = true
+        let prompt = String(localized: "Tunnelbird needs your password once, to install the service that creates the tunnels.")
+        let command = "\"'\(service.path)' \(argument)\""
+        let source = "do shell script \(command) with prompt \"\(prompt)\" with administrator privileges"
+        Task.detached {
+            var failure: NSDictionary?
+            NSAppleScript(source: source)?.executeAndReturnError(&failure)
+            let message = failure?[NSAppleScript.errorMessage] as? String
+            let cancelled = failure?[NSAppleScript.errorNumber] as? Int == -128
+            await MainActor.run { [weak self] in
+                self?.installing = false
+                if let message, !cancelled {
+                    self?.problem = ProblemReport(
+                        title: String(localized: "Cannot install the service"),
+                        details: message)
+                }
             }
         }
     }

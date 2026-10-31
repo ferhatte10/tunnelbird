@@ -176,11 +176,33 @@ private struct UnavailableView: View {
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
             }
-            HStack(spacing: 6) {
-                ProgressView().controlSize(.small)
-                Text("Trying to connect…").foregroundStyle(.secondary)
+            if model.serviceInApp != nil {
+                Button {
+                    model.runServiceAction("--install-daemon")
+                } label: {
+                    if model.installing {
+                        HStack(spacing: 6) {
+                            ProgressView().controlSize(.small)
+                            Text("Installing…")
+                        }
+                    } else {
+                        Text("Install the Service…")
+                    }
+                }
+                .controlSize(.large)
+                .keyboardShortcut(.defaultAction)
+                .disabled(model.installing)
+                .padding(.top, 4)
+                Text("macOS asks for the administrator's password, once.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Trying to connect…").foregroundStyle(.secondary)
+                }
+                .padding(.top, 4)
             }
-            .padding(.top, 4)
         }
         .padding(32)
     }

@@ -162,7 +162,9 @@ struct PreferencesView: View {
 }
 
 private struct GeneralTab: View {
+    @EnvironmentObject private var model: Model
     @ObservedObject private var prefs = Preferences.shared
+    @State private var confirmingRemoval = false
     @State private var startAtLogin = SMAppService.mainApp.status == .enabled
     @State private var loginFailure: String?
     @State private var language = (UserDefaults.standard.stringArray(forKey: "AppleLanguages")?.first).map { String($0.prefix(2)) } ?? ""
@@ -191,6 +193,20 @@ private struct GeneralTab: View {
                     Text(loginFailure).font(.caption).foregroundStyle(errorColor)
                 }
                 Toggle("Check for Updates", isOn: $prefs.checkUpdates)
+            }
+            if model.serviceInApp != nil {
+                Section("Tunnel Service") {
+                    Button("Reinstall the Service…") { model.runServiceAction("--install-daemon") }
+                        .disabled(model.installing)
+                    Button("Remove the Service…") { confirmingRemoval = true }
+                        .disabled(model.installing)
+                }
+                .confirmationDialog("Remove the service?", isPresented: $confirmingRemoval) {
+                    Button("Remove", role: .destructive) { model.runServiceAction("--uninstall-daemon") }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("Tunnels stop working until it is installed again. Your tunnels are kept.")
+                }
             }
             Section("Language") {
                 Picker("Interface Language", selection: Binding(
