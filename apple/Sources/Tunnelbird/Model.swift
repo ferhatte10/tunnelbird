@@ -55,6 +55,10 @@ final class Model: ObservableObject {
     @Published var qrTunnel: Tunnel?
     @Published var importRequested = false
     @Published var installing = false
+    /// The running service's version; nil if it is too old to say.
+    @Published var serviceVersion: String?
+    /// The version just updated to, on the first launch after an update.
+    @Published var updatedTo: String?
 
     private var connection: ServiceConnection?
     private var last: (date: Date, counters: Counters)?
@@ -77,6 +81,11 @@ final class Model: ObservableObject {
     init() {
         Self.current = self
         Task { await connectLoop() }
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["TUNNELBIRD_SNAPSHOT_BANNERS"] != nil {
+            updatedTo = appVersion
+        }
+        #endif
         guard !quiet else { return }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
         // Only says that something changed: see `currentNetworkKind`.
@@ -85,6 +94,7 @@ final class Model: ObservableObject {
         }
         pathMonitor.start(queue: .main)
         Task { await checkForUpdate() }
+        noticeUpdate()
     }
 
     private func notify(id: String, title: String, body: String) {
@@ -216,7 +226,8 @@ final class Model: ObservableObject {
             opened.start(
                 onEvent: { message in Task { @MainActor [weak self] in self?.handle(message) } },
                 onClose: { Task { @MainActor [weak self] in self?.lost(opened) } })
-            _ = try await opened.send(["request": "hello", "version": protocolVersion])
+            let hello = try await opened.send(["request": "hello", "version": protocolVersion])
+            serviceVersion = hello.serviceVersion
             let answer = try await opened.send(["request": "list-tunnels"])
             tunnels = answer.tunnels ?? []
             updateLocation()
@@ -395,6 +406,24 @@ final class Model: ObservableObject {
                 logLines = answer?.lines ?? logLines
             }
         }
+    }
+
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+    }
+
+    /// An update of the app does not reach the service, which root installed.
+    var serviceOutdated: Bool {
+        ready && serviceInApp != nil && serviceVersion != appVersion
+    }
+
+    /// Says once that the app was updated. A first installation is no update.
+    private func noticeUpdate() {
+        let defaults = UserDefaults.standard
+        if let last = defaults.string(forKey: "last-version"), last != appVersion {
+            updatedTo = appVersion
+        }
+        defaults.set(appVersion, forKey: "last-version")
     }
 
     /// True once the service was installed, running or not.

@@ -128,6 +128,10 @@ pub enum ResponseBody {
     Ok,
     Hello {
         version: u32,
+        /// The service's own version: an interface installed later can offer
+        /// to update it. Older services leave it out.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        service_version: Option<String>,
     },
     Tunnels {
         tunnels: Vec<Tunnel>,

@@ -144,10 +144,9 @@ struct MenuBarContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            status
-            if let connected = model.connected {
-                activity(connected)
-            }
+            // Always the same size: macOS moves a panel whose content shrinks.
+            status.frame(maxWidth: .infinity, minHeight: 52, alignment: .topLeading)
+            activity.opacity(model.connected == nil ? 0.35 : 1)
             if !model.tunnels.isEmpty {
                 Divider()
                 ForEach(model.tunnels) { tunnel in
@@ -181,6 +180,12 @@ struct MenuBarContent: View {
     }
 
     @ViewBuilder private var status: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            statusLines
+        }
+    }
+
+    @ViewBuilder private var statusLines: some View {
         if let connected = model.connected {
             if model.serverResponds {
                 Text("Connected to “\(connected.name)”")
@@ -203,7 +208,7 @@ struct MenuBarContent: View {
         }
     }
 
-    private func activity(_ connected: Tunnel) -> some View {
+    private var activity: some View {
         VStack(alignment: .leading, spacing: 6) {
             TrafficGraph(samples: model.samples)
                 .frame(height: 48)
@@ -226,7 +231,7 @@ struct MenuBarContent: View {
             Spacer()
             if model.busy.contains(tunnel.id) || tunnel.state == .connecting || tunnel.state == .disconnecting {
                 ProgressView().controlSize(.small)
-                Text(tunnel.state == .disconnecting ? "Disconnecting…" : "Connecting…")
+                Text(tunnel.state == .connected || tunnel.state == .disconnecting ? "Disconnecting…" : "Connecting…")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {

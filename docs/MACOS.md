@@ -1,7 +1,6 @@
 # Tunnelbird on macOS: hand-off
 
-Everything needed to continue the macOS version on a Mac, with or without an
-AI assistant. Read with `docs/plans/later.md` (decisions), `docs/PROTOCOL.md`
+Everything needed to continue the macOS version on a Mac. Read with `docs/plans/later.md` (decisions), `docs/PROTOCOL.md`
 (interface ↔ service messages) and `docs/COMPATIBILITY.md`.
 
 ## Decisions already taken (do not reopen)
@@ -62,7 +61,7 @@ Points to watch on the first real run (reasoned, not verified):
   disconnect (`macos/net.rs`, `Journal`). A crash leaves it in place, so it is
   written down first and the next daemon start undoes it (run with
   `kill -9`: DNS on all services and the scoped route came back). SIGTERM and Ctrl+C restore it at once
-  (`restore_network_on_stop`, still to run).
+  (`restore_network_on_stop`; not observed apart from a restart).
 - The Wi-Fi name: macOS hides it from apps without the location permission
   (`ipconfig getsummary` shows `<redacted>`). The app asks for it, for trusted
   networks only; without it every Wi-Fi counts as untrusted.
@@ -113,39 +112,29 @@ Points to watch on the first real run (reasoned, not verified):
   hand, and the rebinding it needs is only reasoned.
 - The socket `/var/run/tunnelbird.sock` must be owned `root:admin`, mode 0660.
 
-## Still to build
+## Build and install
 
-1. **SwiftUI menu bar app** (`apple/` folder, Swift package): connects to
-   `/var/run/tunnelbird.sock`, sends the JSON lines of docs/PROTOCOL.md,
-   shows the tunnel list, connect switch, live traffic (from `traffic`
-   events), import (file picker → text → `import`), editor, preferences
-   (trusted networks: the decision logic is in `tunnelbird_core::trust`, to
-   call through a small C/Swift bridge or reimplement the few lines), update
-   notice. Same texts as the Linux app (`po/fr.po` holds the French).
-2. **Installer**: `.dmg` with `Tunnelbird.app`; at first launch the app asks
-   for the administrator password once to copy the helper and run
-   `--install-daemon` (AuthorizationExecuteWithPrivileges is deprecated:
-   use an `osascript … with administrator privileges` call, or a `.pkg`).
-3. Website: the macOS tab of the install section, with the “Open Anyway”
-   screenshots.
+```sh
+apple/make-dmg.sh    # apple/build/Tunnelbird-VERSION-ARCH.dmg, needs Homebrew's openvpn
+```
 
-## Prompt for an AI session on the Mac
+Open it, drop the app on Applications, start it: it offers to install the
+service (administrator's password). To remove everything:
 
-Paste this in a Claude Code session opened in the cloned repository:
+```sh
+sudo "/Library/Application Support/Tunnelbird/tunnelbird-service" --uninstall-daemon
+sudo rm -rf "/Library/Application Support/Tunnelbird"    # also the stored tunnels and keys
+rm -rf /Applications/Tunnelbird.app
+```
 
-> You are continuing Tunnelbird, an open-source VPN client (Rust core,
-> GTK app on Linux). Read `AGENTS.md`, `docs/MACOS.md`, `docs/PROTOCOL.md`,
-> `docs/plans/later.md` and `docs/COMPATIBILITY.md` first. Decisions are
-> final: no App Store, no paid Apple account, nothing paid; a root launchd
-> helper (`crates/service`, `--daemon`) makes the tunnels with BoringTun and
-> `openvpn`; the interface is a native SwiftUI menu bar app talking to the
-> helper over `/var/run/tunnelbird.sock` with the JSON protocol. Start with
-> “First run, step by step”: make `cargo build -p tunnelbird-service`
-> compile on this Mac (the macOS code in `crates/service/src/macos/` was
-> written on Linux and never compiled), then test with `--fake`, then a real
-> tunnel as root, telling me each sudo command to run myself. Then build the
-> SwiftUI app. Rules: English code and docs, French when talking to me, no
-> commit without my explicit request, commits on a feature branch, never
-> mention an AI in commits, never put the WireGuard logo or a legal notice in
-> the interface, keep `docs/COMPATIBILITY.md` honest (“Tested” only when
-> really run).
+The app's version in `apple/Resources/Info.plist` must equal the service's in
+`crates/service/Cargo.toml` (`build.sh` checks): a difference offers the user to
+update the service, which an update of the app does not reach.
+
+## Still to do
+
+1. Intel: needs `rustup`, Intel builds of OpenVPN's libraries, and a Mac to test.
+2. CI building the `.dmg`, and a published `latest.json` with the macOS download.
+3. The website's macOS tab with the “Open Anyway” screenshots, once a `.dmg` is
+   published. `docs/COMPATIBILITY.md` lists what has not run yet.
+4. The cause of the missing IPv6 through a WireGuard® tunnel.
