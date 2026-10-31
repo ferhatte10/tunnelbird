@@ -36,6 +36,8 @@ final class Model: ObservableObject {
     static let graphLength = 60
 
     @Published var ready = false
+    /// Until the first try is over, there is nothing to say about the service.
+    @Published var checked = false
     @Published var failure: String?
     @Published var tunnels: [Tunnel] = []
     @Published var busy: Set<String> = []
@@ -207,6 +209,7 @@ final class Model: ObservableObject {
     }
 
     private func open() async {
+        defer { checked = true }
         do {
             let opened = try ServiceConnection(path: socketPath)
             connection = opened
@@ -459,11 +462,12 @@ final class Model: ObservableObject {
     }
 
     /// Throws so that the import dialog can stay open and show why.
-    func importTunnel(name: String, text: String, login: (String, String)?) async throws {
+    func importTunnel(name: String, text: String, login: (String, String)?, files: [String: String]) async throws {
         guard let connection else {
             throw ServiceError(code: "unavailable", details: String(localized: "The service is not running"))
         }
         var body: [String: Any] = ["request": "import", "name": name, "text": text]
+        if !files.isEmpty { body["files"] = files }
         if let login {
             body["login"] = ["username": login.0, "password": login.1]
         }

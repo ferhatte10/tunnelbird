@@ -16,6 +16,8 @@
 //! examples. Field and variant names are part of the protocol: renaming one
 //! is a breaking change and bumps [`VERSION`].
 
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 
 use crate::health::Health;
@@ -53,6 +55,10 @@ pub enum RequestBody {
         /// OpenVPN user name and password, never written in the file.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         login: Option<Login>,
+        /// Certificates and keys the file refers to, by file name: the service
+        /// cannot read the user's files, and stores them inside the profile.
+        #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+        files: BTreeMap<String, String>,
     },
     /// Replaces a tunnel's file and name; a connected tunnel keeps its old
     /// settings until it reconnects.

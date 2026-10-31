@@ -16,6 +16,7 @@ use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::{Duration, Instant};
 
+use tunnelbird_core::logs::{Severity, read_openvpn_line};
 use tunnelbird_core::protocol::Login;
 
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(45);
@@ -77,11 +78,7 @@ fn opened_device(line: &str) -> Option<&str> {
 /// Root runs it, so only copies root alone can change: the one the installation
 /// put in the service's folder. Homebrew's belongs to the user: development only.
 fn candidates() -> Vec<PathBuf> {
-    let mut paths = vec![
-        Path::new(super::DATA_DIR)
-            .join(super::BUNDLED_OPENVPN)
-            .join("openvpn"),
-    ];
+    let mut paths = vec![Path::new(super::OPENVPN_DIR).join("openvpn")];
     if cfg!(debug_assertions) {
         paths.push(PathBuf::from("/opt/homebrew/sbin/openvpn"));
         paths.push(PathBuf::from("/usr/local/sbin/openvpn"));
@@ -127,7 +124,7 @@ impl Process {
             .arg(&config)
             .args(["--dev", interface, "--dev-type", "tun", "--verb", "3"])
             .stdout(Stdio::piped())
-            .stderr(Stdio::null());
+            .stderr(Stdio::piped());
         if let Some(login) = login {
             let auth = run_dir.join(format!("{id}.auth"));
             write_private(&auth, &format!("{}\n{}\n", login.username, login.password))?;
@@ -143,9 +140,21 @@ impl Process {
         write_private(&run_dir.join(PID_FILE), &child.id().to_string())?;
         files.push(run_dir.join(PID_FILE));
         let stdout = child.stdout.take().ok_or("OpenVPN gave no output")?;
+        let stderr = child.stderr.take().ok_or("OpenVPN gave no output")?;
         let (sender, lines) = mpsc::channel::<String>();
         let logs = Arc::new(Mutex::new(Vec::new()));
         let kept = logs.clone();
+        // An option it refuses is written here, and then it ends at once.
+        let (errors, kept_errors) = (sender.clone(), logs.clone());
+        std::thread::spawn(move || {
+            for line in BufReader::new(stderr).lines().map_while(Result::ok) {
+                kept_errors
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner())
+                    .push(line.clone());
+                let _ = errors.send(line);
+            }
+        });
         std::thread::spawn(move || {
             // Keeps reading after startup, when nobody listens any more: a closed
             // pipe would kill OpenVPN at its next log line.
@@ -163,6 +172,7 @@ impl Process {
             logs,
         };
         let deadline = Instant::now() + STARTUP_TIMEOUT;
+        let mut last_problem = None;
         loop {
             match lines.recv_timeout(deadline.saturating_duration_since(Instant::now())) {
                 Ok(line) if opened_device(&line).is_some() => {
@@ -183,8 +193,18 @@ impl Process {
                 Ok(line) if line.contains("AUTH_FAILED") => {
                     return Err("The server refused the user name or password".to_owned());
                 }
-                Ok(_) => {}
-                Err(_) => {
+                Ok(line) => {
+                    if read_openvpn_line(&line).0 == Severity::Error {
+                        last_problem = Some(read_openvpn_line(&line).1.to_owned());
+                    }
+                }
+                // Both pipes closed: it ended, and the reason is in its output.
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
+                    return Err(last_problem.map_or("OpenVPN stopped".to_owned(), |line| {
+                        format!("OpenVPN stopped: {line}")
+                    }));
+                }
+                Err(mpsc::RecvTimeoutError::Timeout) => {
                     return Err("OpenVPN did not connect in time (wrong server address, or blocked network?)".to_owned());
                 }
             }

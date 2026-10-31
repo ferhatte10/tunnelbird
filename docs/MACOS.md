@@ -82,8 +82,8 @@ Points to watch on the first real run (reasoned, not verified):
   27.2 killed it there (exit 137, launchd `OS_REASON_EXEC`), while the same file
   ran elsewhere. Only ad hoc signed program in that folder.
 - OpenVPN and its libraries come from Homebrew at build time
-  (`apple/bundle-openvpn.sh`) and are copied to the service's root-only folder at
-  installation. A release service only runs that copy: anyone can write in an app
+  (`apple/bundle-openvpn.sh`) and are copied to `/Library/Tunnelbird` at installation
+  (root only, and no space in the path: OpenVPN cannot run a quoted script). A release service only runs that copy: anyone can write in an app
   under `/Applications`, and Homebrew's files belong to the user.
 - OpenVPN sets its own routes and DNS (`dns-updown`), and takes them down only
   when stopped with SIGTERM: a first run with SIGKILL left a route behind. It

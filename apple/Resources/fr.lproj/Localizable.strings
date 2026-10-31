@@ -166,3 +166,4 @@
 "Tunnels stop working until it is installed again. Your tunnels are kept." = "Les tunnels ne marchent plus jusqu’à sa réinstallation. Vos tunnels sont conservés.";
 "One last step: Tunnelbird installs a small service that creates your VPN tunnels." = "Dernière étape : Tunnelbird installe un petit service qui crée vos tunnels VPN.";
 "Welcome to Tunnelbird" = "Bienvenue dans Tunnelbird";
+"Choose a .conf or .ovpn file, with its certificates if it has any." = "Choisissez un fichier .conf ou .ovpn, avec ses certificats s’il en a.";

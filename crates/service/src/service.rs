@@ -7,7 +7,7 @@
 //! No I/O here besides the store and the backend, so all of it is tested
 //! with fakes on any system.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use serde::{Deserialize, Serialize};
 use tunnelbird_core::config;
@@ -116,7 +116,12 @@ impl<B: Backend, S: Store> Service<B, S> {
                 },
                 Vec::new(),
             ),
-            RequestBody::Import { name, text, login } => self.import(name, text, login),
+            RequestBody::Import {
+                name,
+                text,
+                login,
+                files,
+            } => self.import(name, text, login, files),
             RequestBody::Update {
                 tunnel,
                 name,
@@ -231,7 +236,17 @@ impl<B: Backend, S: Store> Service<B, S> {
         self.tunnels.iter().find(|t| t.id == id)
     }
 
-    fn import(&mut self, name: String, text: String, login: Option<Login>) -> Outcome {
+    fn import(
+        &mut self,
+        name: String,
+        text: String,
+        login: Option<Login>,
+        files: BTreeMap<String, String>,
+    ) -> Outcome {
+        let text = match with_files_inside(text, &files) {
+            Ok(text) => text,
+            Err(message) => return error(ErrorCode::InvalidProfile, message),
+        };
         if let Err(message) = validate(&text, login.as_ref()) {
             return error(ErrorCode::InvalidProfile, message);
         }
@@ -440,6 +455,21 @@ fn unix_now() -> i64 {
 
 /// Checks a file as the Linux app does at import. OpenVPN certificates must
 /// be inline: the service never reads the user's files.
+fn with_files_inside(text: String, files: &BTreeMap<String, String>) -> Result<String, String> {
+    if !files.is_empty()
+        && let Ok(Profile::OpenVpn(mut config)) = profile::parse_bytes(text.as_bytes())
+    {
+        config
+            .resolve_files(|name| {
+                let base = std::path::Path::new(name).file_name()?.to_str()?;
+                files.get(base).cloned()
+            })
+            .map_err(|err| err.to_string())?;
+        return Ok(config.to_ovpn());
+    }
+    Ok(text)
+}
+
 pub fn validate(text: &str, login: Option<&Login>) -> Result<Profile, String> {
     let mut profile = profile::parse_bytes(text.as_bytes())?;
     if let Profile::OpenVpn(config) = &mut profile {
@@ -593,6 +623,7 @@ mod tests {
             name: name.to_owned(),
             text: text.to_owned(),
             login,
+            files: BTreeMap::new(),
         }) {
             (ResponseBody::Tunnel { tunnel }, _) => tunnel.id,
             other => panic!("import failed: {other:?}"),
@@ -634,6 +665,7 @@ mod tests {
             name: "Bad".to_owned(),
             text: "client\nremote a.example\nca ca.crt\nauth-user-pass\n".to_owned(),
             login: None,
+            files: BTreeMap::new(),
         });
         assert!(matches!(
             response,
@@ -783,6 +815,42 @@ mod tests {
     }
 
     #[test]
+    fn files_next_to_a_profile_are_stored_inside_it() {
+        let mut service = service();
+        let text = "client\nremote vpn.example.com 1194\nca folder/ca.crt\nauth-user-pass\n";
+        let login = Login {
+            username: "alex".to_owned(),
+            password: "secret".to_owned(),
+        };
+        let request = |files: BTreeMap<String, String>| RequestBody::Import {
+            name: "A".to_owned(),
+            text: text.to_owned(),
+            login: Some(login.clone()),
+            files,
+        };
+        let (response, _) = service.handle(request(BTreeMap::new()));
+        assert!(matches!(
+            response,
+            ResponseBody::Error {
+                code: ErrorCode::InvalidProfile,
+                ..
+            }
+        ));
+
+        let files = BTreeMap::from([("ca.crt".to_owned(), "X\n".to_owned())]);
+        let (response, _) = service.handle(request(files));
+        let ResponseBody::Tunnel { tunnel } = response else {
+            panic!("not imported: {response:?}");
+        };
+        let exported = service.handle(RequestBody::Export { tunnel: tunnel.id }).0;
+        let ResponseBody::Text { text } = exported else {
+            panic!("no text");
+        };
+        assert!(text.contains("<ca>\nX\n</ca>"), "{text}");
+        assert!(!text.contains("folder/ca.crt"));
+    }
+
+    #[test]
     fn traffic_events_carry_the_server_health() {
         let mut service = service();
         let tunnel = import(&mut service, "A", WG, None);
@@ -805,6 +873,7 @@ mod tests {
             name: "Office".to_owned(),
             text: OVPN.to_owned(),
             login: None,
+            files: BTreeMap::new(),
         });
         assert!(matches!(
             response,

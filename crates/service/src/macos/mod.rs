@@ -356,15 +356,19 @@ pub fn open_socket_to_admins(socket: &std::path::Path) -> std::io::Result<()> {
 /// an ad hoc signature (seen on macOS 27.2), and we have no paid one.
 const INSTALLED_EXE: &str = "/Library/Application Support/Tunnelbird/tunnelbird-service";
 
-/// The folder of OpenVPN and its libraries, under `DATA_DIR` once installed and
-/// next to the service's program in the app.
+/// The folder of OpenVPN and its libraries next to the service's program in
+/// the app.
 const BUNDLED_OPENVPN: &str = "openvpn";
+/// Once installed: root's alone, and without a space, which `DATA_DIR` has.
+/// OpenVPN checks a quoted script path but then cannot run it, so a space there
+/// would leave the tunnel without its DNS (exit status 127, seen on a real run).
+const OPENVPN_DIR: &str = "/Library/Tunnelbird/openvpn";
 
 /// Copies what the app carries to where only root can change it: anyone can
 /// write in an app that sits in `/Applications`.
 fn install_openvpn(from: &std::path::Path) -> Result<(), String> {
     use std::os::unix::fs::PermissionsExt;
-    let target = PathBuf::from(DATA_DIR).join(BUNDLED_OPENVPN);
+    let target = PathBuf::from(OPENVPN_DIR);
     let _ = std::fs::remove_dir_all(&target);
     if !from.exists() {
         return Ok(());
@@ -436,14 +440,21 @@ pub fn install() -> Result<(), String> {
         .map_err(|err| format!("{INSTALLED_EXE}: {err}"))?;
     let path = format!("/Library/LaunchDaemons/{LAUNCHD_LABEL}.plist");
     std::fs::write(&path, launchd_plist(INSTALLED_EXE)).map_err(|err| format!("{path}: {err}"))?;
-    let status = std::process::Command::new("/bin/launchctl")
-        .args(["bootstrap", "system", &path])
-        .status()
-        .map_err(|err| err.to_string())?;
-    status
-        .success()
-        .then_some(())
-        .ok_or_else(|| "launchctl bootstrap failed".to_owned())
+    // `bootout` returns while the old daemon is still stopping (it restores the
+    // network first), and launchd refuses to load it again until then.
+    let mut problem = String::new();
+    for _ in 0..20 {
+        let output = std::process::Command::new("/bin/launchctl")
+            .args(["bootstrap", "system", &path])
+            .output()
+            .map_err(|err| err.to_string())?;
+        if output.status.success() {
+            return Ok(());
+        }
+        problem = String::from_utf8_lossy(&output.stderr).trim().to_owned();
+        std::thread::sleep(Duration::from_millis(500));
+    }
+    Err(format!("launchctl bootstrap failed: {problem}"))
 }
 
 pub fn uninstall() -> Result<(), String> {
@@ -453,7 +464,7 @@ pub fn uninstall() -> Result<(), String> {
         .status();
     let _ = std::fs::remove_file(INSTALLED_EXE);
     let _ = std::fs::remove_file("/var/run/tunnelbird.sock");
-    let _ = std::fs::remove_dir_all(PathBuf::from(DATA_DIR).join(BUNDLED_OPENVPN));
+    let _ = std::fs::remove_dir_all("/Library/Tunnelbird");
     std::fs::remove_file(&path).map_err(|err| format!("{path}: {err}"))
 }
 

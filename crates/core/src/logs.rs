@@ -69,9 +69,13 @@ impl LogBook {
 pub fn read_openvpn_line(line: &str) -> (Severity, &str) {
     let text = strip_date(line.trim());
     let upper = text.to_uppercase();
-    let severity = if ["AUTH_FAILED", "ERROR", "FATAL", "EXITING DUE TO", "CANNOT "]
-        .iter()
-        .any(|word| upper.contains(word))
+    // Its script for the DNS failing is only an ordinary line in its log.
+    let script_failed =
+        upper.contains("COMMAND EXITED WITH STATUS") && !upper.ends_with("STATUS 0");
+    let severity = if script_failed
+        || ["AUTH_FAILED", "ERROR", "FATAL", "EXITING DUE TO", "CANNOT "]
+            .iter()
+            .any(|word| upper.contains(word))
     {
         Severity::Error
     } else if [
@@ -151,5 +155,13 @@ mod tests {
             Severity::Warning
         );
         assert_eq!(read_openvpn_line("short"), (Severity::Info, "short"));
+        assert_eq!(
+            read_openvpn_line("2026-10-31 01:30:00 dns up command exited with status 127").0,
+            Severity::Error
+        );
+        assert_eq!(
+            read_openvpn_line("2026-10-31 01:30:00 dns up command exited with status 0").0,
+            Severity::Info
+        );
     }
 }

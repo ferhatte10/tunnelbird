@@ -9,6 +9,7 @@ struct MainView: View {
     @EnvironmentObject private var model: Model
     @State private var importing = false
     @State private var fileToImport: ImportedFile?
+    @State private var pendingImports: [ImportedFile] = []
     @State private var dropTargeted = false
     #if DEBUG
     @State private var snapshotPreferences = false
@@ -17,7 +18,9 @@ struct MainView: View {
 
     var body: some View {
         Group {
-            if !model.ready {
+            if !model.checked {
+                Color.clear
+            } else if !model.ready {
                 UnavailableView()
             } else if model.tunnels.isEmpty {
                 EmptyTunnelsView { importing = true }
@@ -71,17 +74,21 @@ struct MainView: View {
             openSnapshotSheet(tunnels)
         }
         #endif
-        .fileImporter(isPresented: $importing, allowedContentTypes: importTypes) { result in
-            if case .success(let url) = result { load(url) }
+        .fileImporter(isPresented: $importing, allowedContentTypes: importTypes, allowsMultipleSelection: true) { result in
+            if case .success(let urls) = result { load(urls) }
         }
         .onDrop(of: [.fileURL], isTargeted: $dropTargeted) { providers in
-            guard model.ready, let provider = providers.first else { return false }
-            _ = provider.loadObject(ofClass: URL.self) { url, _ in
-                if let url { Task { @MainActor in load(url) } }
+            guard model.ready, !providers.isEmpty else { return false }
+            Task { @MainActor in
+                var urls: [URL] = []
+                for provider in providers {
+                    if let url = await droppedURL(provider) { urls.append(url) }
+                }
+                load(urls)
             }
             return true
         }
-        .sheet(item: $fileToImport) { file in
+        .sheet(item: $fileToImport, onDismiss: showNextImport) { file in
             ImportSheet(file: file).environmentObject(model)
         }
         .sheet(item: $model.editedTunnel) { tunnel in
@@ -129,7 +136,8 @@ struct MainView: View {
             if fileToImport == nil {
                 fileToImport = ImportedFile(
                     url: URL(fileURLWithPath: "/tmp/Office.ovpn"),
-                    text: "client\nremote vpn.example.com 1194\nauth-user-pass\n")
+                    text: "client\nremote vpn.example.com 1194\nauth-user-pass\n",
+                    files: [:])
             }
         default:
             break
@@ -137,23 +145,70 @@ struct MainView: View {
     }
     #endif
 
-    private func load(_ url: URL) {
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        do {
-            let text = try String(contentsOf: url, encoding: .utf8)
-            fileToImport = ImportedFile(url: url, text: text)
-        } catch {
-            let file = url.lastPathComponent
-            model.problem = ProblemReport(
-                title: String(localized: "Cannot import “\(file)”"),
-                details: error.localizedDescription)
+    /// Profiles open one after the other; other files chosen with them are their
+    /// certificates and keys, and those next to a profile are looked up too.
+    private func load(_ urls: [URL]) {
+        let isProfile = { (url: URL) in ["conf", "ovpn"].contains(url.pathExtension.lowercased()) }
+        let chosen = urls.filter { !isProfile($0) }
+        var profiles: [ImportedFile] = []
+        for url in urls.filter(isProfile) {
+            do {
+                let text = try readText(url)
+                profiles.append(ImportedFile(url: url, text: text, files: companions(of: url, text: text, chosen: chosen)))
+            } catch {
+                report(url, error.localizedDescription)
+            }
         }
+        if profiles.isEmpty, let first = urls.first {
+            report(first, String(localized: "Choose a .conf or .ovpn file, with its certificates if it has any."))
+        }
+        pendingImports = profiles
+        showNextImport()
+    }
+
+    private func showNextImport() {
+        guard fileToImport == nil, !pendingImports.isEmpty else { return }
+        fileToImport = pendingImports.removeFirst()
+    }
+
+    private func report(_ url: URL, _ details: String) {
+        let file = url.lastPathComponent
+        model.problem = ProblemReport(title: String(localized: "Cannot import “\(file)”"), details: details)
     }
 
     private var importTypes: [UTType] {
-        [UTType(filenameExtension: "conf"), UTType(filenameExtension: "ovpn")].compactMap { $0 }
+        ["conf", "ovpn", "crt", "pem", "key"].compactMap { UTType(filenameExtension: $0) }
     }
+}
+
+private func droppedURL(_ provider: NSItemProvider) async -> URL? {
+    await withCheckedContinuation { continuation in
+        _ = provider.loadObject(ofClass: URL.self) { url, _ in
+            continuation.resume(returning: url)
+        }
+    }
+}
+
+private func readText(_ url: URL) throws -> String {
+    let scoped = url.startAccessingSecurityScopedResource()
+    defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+    return try String(contentsOf: url, encoding: .utf8)
+}
+
+/// The certificates and keys an OpenVPN profile names, by file name: among the
+/// files chosen with it, then in its folder. The service checks that none lacks.
+private func companions(of url: URL, text: String, chosen: [URL]) -> [String: String] {
+    let directives: Set<String> = ["ca", "cert", "key", "tls-auth", "tls-crypt", "tls-crypt-v2"]
+    var files: [String: String] = [:]
+    for line in text.split(whereSeparator: \.isNewline) {
+        let parts = line.split(whereSeparator: \.isWhitespace).map(String.init)
+        guard parts.count >= 2, directives.contains(parts[0]) else { continue }
+        let name = URL(fileURLWithPath: parts[1].trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))).lastPathComponent
+        let source = chosen.first { $0.lastPathComponent == name }
+            ?? url.deletingLastPathComponent().appendingPathComponent(name)
+        files[name] = try? readText(source)
+    }
+    return files
 }
 
 /// Without the service the app can do nothing. On a first use nothing is wrong
