@@ -6,14 +6,91 @@ import CoreImage
 import CoreImage.CIFilterBuiltins
 import SwiftUI
 
-/// Edits a tunnel's file as text: the service checks it again with the real
-/// parser, and says what is wrong.
+/// A tunnel's file, edited setting by setting. The text stays the reference:
+/// each field reads and writes its line, so that settings without a field, and
+/// the other servers of a file, are kept as they are. The service checks the
+/// result with the real parser, and says what is wrong.
+struct ProfileText {
+    var text: String
+
+    private var lines: [Substring] { text.split(separator: "\n", omittingEmptySubsequences: false) }
+
+    private func isSection(_ line: Substring) -> Bool {
+        line.trimmingCharacters(in: .whitespaces).hasPrefix("[")
+    }
+
+    private func range(of section: String, in lines: [Substring]) -> Range<Int>? {
+        let header = "[\(section.lowercased())]"
+        guard let start = lines.firstIndex(where: { $0.trimmingCharacters(in: .whitespaces).lowercased() == header }) else {
+            return nil
+        }
+        let end = lines[(start + 1)...].firstIndex(where: isSection) ?? lines.count
+        return (start + 1)..<end
+    }
+
+    private func keyOf(_ line: Substring) -> String? {
+        let parts = line.split(separator: "=", maxSplits: 1)
+        return parts.count == 2 ? parts[0].trimmingCharacters(in: .whitespaces).lowercased() : nil
+    }
+
+    /// In `[section]`, the first occurrence: the first server's, as on Linux.
+    func value(_ section: String, _ key: String) -> String {
+        let all = lines
+        guard let range = range(of: section, in: all) else { return "" }
+        for line in all[range] where keyOf(line) == key.lowercased() {
+            let parts = line.split(separator: "=", maxSplits: 1)
+            return parts[1].trimmingCharacters(in: .whitespaces)
+        }
+        return ""
+    }
+
+    /// Empty removes the line; a new one goes right after the section's header.
+    mutating func set(_ section: String, _ key: String, _ value: String) {
+        var all = lines
+        guard let range = range(of: section, in: all) else { return }
+        let index = all[range].firstIndex { keyOf($0) == key.lowercased() }
+        let line = Substring("\(key) = \(value)")
+        switch (index, value.isEmpty) {
+        case (let index?, true): all.remove(at: index)
+        case (let index?, false): all[index] = line
+        case (nil, false): all.insert(line, at: range.lowerBound)
+        case (nil, true): break
+        }
+        text = all.joined(separator: "\n")
+    }
+
+    var serverCount: Int {
+        lines.filter { $0.trimmingCharacters(in: .whitespaces).lowercased() == "[peer]" }.count
+    }
+
+    /// An OpenVPN directive's arguments, on its first line.
+    func directive(_ name: String) -> [String] {
+        for line in lines {
+            let parts = line.split(whereSeparator: \.isWhitespace).map(String.init)
+            if parts.first == name { return Array(parts.dropFirst()) }
+        }
+        return []
+    }
+
+    mutating func setDirective(_ name: String, _ arguments: [String]) {
+        var all = lines
+        let line = Substring(([name] + arguments).joined(separator: " "))
+        if let index = all.firstIndex(where: { $0.split(whereSeparator: \.isWhitespace).first == Substring(name) }) {
+            all[index] = line
+        } else {
+            all.insert(line, at: min(1, all.count))
+        }
+        text = all.joined(separator: "\n")
+    }
+}
+
 struct EditSheet: View {
     @EnvironmentObject private var model: Model
     @Environment(\.dismiss) private var dismiss
     let tunnel: Tunnel
     @State private var name: String
-    @State private var text = ""
+    @State private var profile = ProfileText(text: "")
+    @State private var showingFile = false
     @State private var username = ""
     @State private var password = ""
     @State private var loading = true
@@ -25,33 +102,58 @@ struct EditSheet: View {
         _name = State(initialValue: tunnel.name)
     }
 
+    private func field(_ section: String, _ key: String) -> Binding<String> {
+        Binding(
+            get: { profile.value(section, key) },
+            set: { profile.set(section, key, $0.trimmingCharacters(in: .whitespacesAndNewlines)) })
+    }
+
+    /// `host:port`, which the file writes as `remote host port`.
+    private var remote: Binding<String> {
+        Binding(
+            get: { profile.directive("remote").prefix(2).joined(separator: ":") },
+            set: { typed in
+                let parts = typed.split(separator: ":", maxSplits: 1).map(String.init)
+                let rest = profile.directive("remote").dropFirst(2)
+                profile.setDirective("remote", parts + rest)
+            })
+    }
+
+    private var transport: Binding<String> {
+        Binding(
+            get: { profile.directive("proto").first?.hasPrefix("tcp") == true ? "tcp" : "udp" },
+            set: { profile.setDirective("proto", [$0]) })
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Edit Tunnel").font(.title2.weight(.semibold))
-            TextField("Name", text: $name)
+        VStack(spacing: 12) {
+            Text("Edit Tunnel")
+                .font(.title2.weight(.semibold))
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Picker("Edit Tunnel", selection: $showingFile) {
+                Text("Settings").tag(false)
+                Text("File").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
             if loading {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                TextEditor(text: $text)
+            } else if showingFile {
+                TextEditor(text: $profile.text)
                     .font(.system(.callout, design: .monospaced))
                     .autocorrectionDisabled()
-                    .frame(minHeight: 260)
                     .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.primary.opacity(0.15)))
-                if tunnel.kind == "openvpn" {
-                    HStack {
-                        TextField("User Name", text: $username)
-                        SecureField("Password", text: $password)
-                    }
-                    Text("Leave these empty to keep the current login.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+            } else if tunnel.kind == "openvpn" {
+                openVPNForm
+            } else {
+                wireGuardForm
             }
             if let failure {
                 Label(failure, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(errorColor)
                     .font(.callout)
                     .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
             }
             HStack {
@@ -78,15 +180,74 @@ struct EditSheet: View {
             }
         }
         .padding(20)
-        .frame(width: 560, height: 520)
+        .frame(width: 560, height: 620)
         .task {
             do {
-                text = try await model.exported(tunnel)
+                profile.text = try await model.exported(tunnel)
             } catch {
                 failure = (error as? ServiceError)?.details ?? error.localizedDescription
             }
             loading = false
         }
+    }
+
+    private var wireGuardForm: some View {
+        Form {
+            Section {
+                TextField("Name", text: $name)
+            }
+            Section("Server") {
+                TextField("Server Address", text: field("Peer", "Endpoint"))
+                TextField("Server Public Key", text: field("Peer", "PublicKey"))
+                TextField("Preshared Key (optional)", text: field("Peer", "PresharedKey"))
+                TextField("Routed Networks", text: field("Peer", "AllowedIPs"))
+                TextField("Keepalive in Seconds (optional)", text: field("Peer", "PersistentKeepalive"))
+                if profile.serverCount > 1 {
+                    Text("This tunnel has \(profile.serverCount) servers. Only the first one is shown; the others are kept.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Section {
+                TextField("Addresses", text: field("Interface", "Address"))
+                TextField("DNS Servers", text: field("Interface", "DNS"))
+                TextField("Private Key", text: field("Interface", "PrivateKey"))
+                TextField("MTU (optional)", text: field("Interface", "MTU"))
+            } header: {
+                Text("This Computer")
+            } footer: {
+                Text("Addresses and keys of this computer inside the VPN")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var openVPNForm: some View {
+        Form {
+            Section {
+                TextField("Name", text: $name)
+            }
+            Section("Server") {
+                TextField("Server Address", text: remote)
+                Picker("Protocol", selection: transport) {
+                    Text(verbatim: "UDP").tag("udp")
+                    Text(verbatim: "TCP").tag("tcp")
+                }
+            }
+            Section {
+                TextField("User Name", text: $username)
+                SecureField("Password", text: $password)
+            } header: {
+                Text("Login")
+            } footer: {
+                Text("Leave these empty to keep the current login.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
     }
 
     private func save() {
@@ -97,7 +258,7 @@ struct EditSheet: View {
                 try await model.update(
                     tunnel,
                     name: name.trimmingCharacters(in: .whitespaces),
-                    text: text,
+                    text: profile.text,
                     login: username.isEmpty ? nil : (username, password))
                 dismiss()
             } catch {

@@ -90,9 +90,11 @@ struct ServiceMessage: Decodable {
     let lines: [LogLine]?
     let line: LogLine?
     let decision: TrustDecision?
+    let serviceVersion: String?
 
     enum CodingKeys: String, CodingKey {
         case id, response, event, tunnels, tunnel, text, code, message, state, error, counters, health, lines, line, decision
+        case serviceVersion = "service_version"
     }
 
     init(from decoder: Decoder) throws {
@@ -113,6 +115,7 @@ struct ServiceMessage: Decodable {
         lines = try c.decodeIfPresent([LogLine].self, forKey: .lines)
         line = try c.decodeIfPresent(LogLine.self, forKey: .line)
         decision = try c.decodeIfPresent(TrustDecision.self, forKey: .decision)
+        serviceVersion = try c.decodeIfPresent(String.self, forKey: .serviceVersion)
     }
 }
 

@@ -8,10 +8,9 @@
 //! does not use it: NetworkManager plays this part.
 //!
 //! Status: request handling, storage and the Unix socket are tested with a
-//! fake backend. The Windows part (`windows/`: WireGuardNT, ovpn-dco-win,
-//! named pipe, DPAPI, Windows service) and the macOS part (`macos/`) are
-//! written and compile for their systems, but have not run there yet: see
-//! docs/WINDOWS.md and docs/MACOS.md.
+//! fake backend. The macOS part (`macos/`) has run on a Mac (docs/MACOS.md). The
+//! Windows part (`windows/`: WireGuardNT, ovpn-dco-win, named pipe, DPAPI,
+//! Windows service) is written but has not run there (docs/WINDOWS.md).
 //!
 //! Development run, anywhere Unix: `cargo run -p tunnelbird-service -- --fake`
 //! then talk to it with `nc -U "$XDG_RUNTIME_DIR/tunnelbird-dev.sock"`.

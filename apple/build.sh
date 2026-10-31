@@ -10,6 +10,13 @@ SDK26=/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk
 if [[ -z $SDKROOT && -d $SDK26 ]]; then
   export SDKROOT=$SDK26
 fi
+# The app compares this version with the service's, to offer to update it.
+APP_VERSION=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Resources/Info.plist)
+SERVICE_VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' ../crates/service/Cargo.toml | head -1)
+if [[ $APP_VERSION != $SERVICE_VERSION ]]; then
+  print "Versions differ: app $APP_VERSION, service $SERVICE_VERSION" >&2
+  exit 1
+fi
 swift build -c "$CONFIG"
 APP=build/Tunnelbird.app
 rm -rf "$APP"

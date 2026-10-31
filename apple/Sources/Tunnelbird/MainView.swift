@@ -37,6 +37,7 @@ struct MainView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .safeAreaInset(edge: .top, spacing: 0) { Banners() }
         .background(Color(nsColor: .windowBackgroundColor))
         .overlay {
             if dropTargeted {
@@ -209,6 +210,54 @@ private func companions(of url: URL, text: String, chosen: [URL]) -> [String: St
         files[name] = try? readText(source)
     }
     return files
+}
+
+/// What the app has to say once, above everything else.
+private struct Banners: View {
+    @EnvironmentObject private var model: Model
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if model.serviceOutdated {
+                banner("arrow.triangle.2.circlepath", tint: warningColor) {
+                    Text("The tunnel service needs updating, as the app was.")
+                } action: {
+                    Button(model.installing ? "Installing…" : "Update the Service…") {
+                        model.runServiceAction("--install-daemon")
+                    }
+                    .disabled(model.installing)
+                }
+            }
+            if let version = model.updatedTo {
+                banner("sparkles", tint: Color.accentColor) {
+                    Text("Tunnelbird was updated to \(version)")
+                } action: {
+                    Button("What's New") { Links.open(Links.changelog) }
+                    Button("Close") { model.updatedTo = nil }
+                }
+            }
+        }
+    }
+
+    private func banner<Message: View, Actions: View>(
+        _ icon: String, tint: Color,
+        @ViewBuilder message: () -> Message,
+        @ViewBuilder action: () -> Actions
+    ) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                Image(systemName: icon).foregroundStyle(tint)
+                message().fixedSize(horizontal: false, vertical: true)
+                Spacer()
+                action()
+            }
+            .font(.callout)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 9)
+            Divider()
+        }
+        .background(tint.opacity(0.1))
+    }
 }
 
 /// Without the service the app can do nothing. On a first use nothing is wrong

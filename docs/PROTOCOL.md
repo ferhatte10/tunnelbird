@@ -54,7 +54,7 @@ shows the same thing as JSON, for the C# and Swift sides.
 ## Responses (service → interface)
 
 ```json
-{"id":1,"response":"hello","version":2}
+{"id":1,"response":"hello","version":2,"service_version":"0.1.0"}
 {"id":2,"response":"tunnels","tunnels":[{"id":"a1","name":"Office","kind":"openvpn","endpoint":"vpn.example.com:1194","addresses":[],"full_tunnel":true,"state":"disconnected"}]}
 {"id":3,"response":"tunnel","tunnel":{"id":"a1","name":"Office","kind":"openvpn","addresses":[],"full_tunnel":true,"state":"disconnected"}}
 {"id":5,"response":"ok"}

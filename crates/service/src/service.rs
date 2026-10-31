@@ -103,9 +103,13 @@ impl<B: Backend, S: Store> Service<B, S> {
 
     pub fn handle(&mut self, request: RequestBody) -> Outcome {
         match request {
-            RequestBody::Hello { version } if version == VERSION => {
-                (ResponseBody::Hello { version: VERSION }, Vec::new())
-            }
+            RequestBody::Hello { version } if version == VERSION => (
+                ResponseBody::Hello {
+                    version: VERSION,
+                    service_version: Some(env!("CARGO_PKG_VERSION").to_owned()),
+                },
+                Vec::new(),
+            ),
             RequestBody::Hello { version } => error(
                 ErrorCode::VersionMismatch,
                 format!("The service speaks protocol {VERSION}, the interface {version}"),
@@ -848,6 +852,17 @@ mod tests {
         };
         assert!(text.contains("<ca>\nX\n</ca>"), "{text}");
         assert!(!text.contains("folder/ca.crt"));
+    }
+
+    #[test]
+    fn hello_says_which_version_of_the_service_this_is() {
+        assert_eq!(
+            service().handle(RequestBody::Hello { version: VERSION }).0,
+            ResponseBody::Hello {
+                version: VERSION,
+                service_version: Some(env!("CARGO_PKG_VERSION").to_owned()),
+            }
+        );
     }
 
     #[test]
