@@ -56,7 +56,8 @@ pub trait Backend {
     }
 }
 
-/// A line for the tunnel's logs.
+/// A line for the tunnel's logs. Only the macOS backend writes any so far.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub enum BackendLine {
     /// As OpenVPN wrote it: its severity is read from the text.
     Openvpn(String),
