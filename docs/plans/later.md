@@ -151,16 +151,11 @@ and a prompt for an AI session: `docs/WINDOWS.md`, `docs/MACOS.md`.
 
 ### How the owner works on these systems
 
-Everything is written on the Linux PC. The Mac and the Windows PC are build
-and test machines driven remotely: `make mac` / `make windows` send the code
-over SSH, build and launch the app there; the screens are viewed with
-Remmina (macOS screen sharing, Windows remote desktop). Screenshots for the
-website are taken there by script, like `make screenshots` on Linux.
-Swift and WinUI cannot be built on Linux (Apple's and Microsoft's toolkits only
-exist on their systems), hence the remote machines. Never a self-hosted CI
-runner on these machines once the repository is public: anyone's pull request
-could run code on them; GitHub's hosted Mac and Windows runners (free for
-public repositories) build the releases.
+macOS is developed directly on a Mac, with the free command line tools. Windows
+stays to do on a Windows PC. Never a self-hosted CI runner on these machines
+once the repository is public: anyone's pull request could run code on them;
+GitHub's hosted Mac and Windows runners (free for public repositories) build the
+releases.
 
 Effort: weeks for each system; no yearly cost with the choices above.
 

@@ -3,3 +3,6 @@
 /.flatpak-builder
 /repo
 /brag-output*/
+/apple/.build
+/apple/build
+.DS_Store
