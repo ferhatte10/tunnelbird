@@ -16,12 +16,17 @@
 //! examples. Field and variant names are part of the protocol: renaming one
 //! is a breaking change and bumps [`VERSION`].
 
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 
+use crate::health::Health;
+use crate::logs::LogLine;
 use crate::profile::Kind;
+use crate::trust::{Decision, Network, Policy};
 
 /// Protocol version, checked by [`Request::Hello`].
-pub const VERSION: u32 = 1;
+pub const VERSION: u32 = 2;
 
 /// A request from the interface.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -50,6 +55,10 @@ pub enum RequestBody {
         /// OpenVPN user name and password, never written in the file.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         login: Option<Login>,
+        /// Certificates and keys the file refers to, by file name: the service
+        /// cannot read the user's files, and stores them inside the profile.
+        #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+        files: BTreeMap<String, String>,
     },
     /// Replaces a tunnel's file and name; a connected tunnel keeps its old
     /// settings until it reconnects.
@@ -74,6 +83,18 @@ pub enum RequestBody {
     /// Answer: [`ResponseBody::Text`].
     Export {
         tunnel: String,
+    },
+    /// The tunnel's logs of this session. New lines then come as
+    /// [`Event::Log`]. Answer: [`ResponseBody::Logs`].
+    Logs {
+        tunnel: String,
+    },
+    /// What the rule of trusted networks says for a network the computer just
+    /// joined. The interface keeps the policy and acts on the answer: the
+    /// service connects nothing by itself. Answer: [`ResponseBody::TrustDecision`].
+    TrustDecision {
+        policy: Policy,
+        network: Network,
     },
 }
 
@@ -107,6 +128,10 @@ pub enum ResponseBody {
     Ok,
     Hello {
         version: u32,
+        /// The service's own version: an interface installed later can offer
+        /// to update it. Older services leave it out.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        service_version: Option<String>,
     },
     Tunnels {
         tunnels: Vec<Tunnel>,
@@ -116,6 +141,12 @@ pub enum ResponseBody {
     },
     Text {
         text: String,
+    },
+    Logs {
+        lines: Vec<LogLine>,
+    },
+    TrustDecision {
+        decision: Decision,
     },
     /// The request failed. The interface shows its own translated text for
     /// `code`, with `message` (English) as the details.
@@ -157,10 +188,18 @@ pub enum Event {
         error: Option<String>,
     },
     /// Interface counters of the connected tunnel, once a second.
-    Traffic { tunnel: String, counters: Counters },
+    Traffic {
+        tunnel: String,
+        counters: Counters,
+        /// Whether the server answers; left out by older services.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        health: Option<Health>,
+    },
     /// An OpenVPN server asks for the password; answer with a `connect` after
     /// an `update` carrying it, or cancel with a `disconnect`.
     PasswordNeeded { tunnel: String },
+    /// A new line in a tunnel's logs.
+    Log { tunnel: String, line: LogLine },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -298,6 +337,7 @@ mod tests {
                         rx_packets: 1,
                         tx_packets: 2,
                     },
+                    health: Some(Health::NoResponse),
                 },
             }),
         ];

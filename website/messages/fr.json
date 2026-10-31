@@ -52,7 +52,7 @@
 	"tab_source_text": "Il faut Rust, GTK 4.14 et libadwaita 1.5 ou plus récents.",
 	"tab_soon_title": "Bientôt",
 	"tab_windows_text": "Une application Windows native, construite sur le même cœur, est en cours d’écriture. Elle sera téléchargeable gratuitement sur ce site, sans boutique ni compte.",
-	"tab_macos_text": "Une application macOS native, dans la barre des menus et construite sur le même cœur, est en cours d’écriture. Elle sera téléchargeable gratuitement sur ce site, sans boutique ni compte.",
+	"tab_macos_text": "Une application macOS native pour Apple silicon, dans la barre des menus et construite sur le même cœur, est en cours de finition. Elle sera téléchargeable gratuitement sur ce site, sans boutique ni compte.",
 	"tab_soon_follow": "Suivre l’avancement sur GitHub",
 	"install_links_script": "Lire le script d’abord",
 	"install_links_steps": "Le faire étape par étape",

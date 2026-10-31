@@ -5,12 +5,14 @@ stores no secret itself.
 
 - `crates/core` (`tunnelbird-core`): the logic every system shares, pure and
   unit-tested: the `.conf` and `.ovpn` parsers, providers, trusted networks,
-  server health, versions. No GTK, no D-Bus, no file system: the Windows and
-  macOS apps planned in `docs/plans/later.md` will use it as it is.
-- `crates/service` (`tunnelbird-service`): the tunnel service of the future
-  Windows and macOS apps ([PROTOCOL.md](PROTOCOL.md)); its logic is tested
-  on Linux with a fake backend; the Windows and macOS backends are written
-  but not yet run there ([WINDOWS.md](WINDOWS.md), [MACOS.md](MACOS.md)).
+  server health, versions. No GTK, no D-Bus, no file system: the macOS service,
+  and the future Windows one, use it as it is.
+- `crates/service` (`tunnelbird-service`): the tunnel service of the macOS
+  app and the future Windows one ([PROTOCOL.md](PROTOCOL.md)); its logic is
+  tested with a fake backend. The macOS backend has run on a Mac
+  ([MACOS.md](MACOS.md)); the Windows one is written but has not run
+  ([WINDOWS.md](WINDOWS.md)).
+- `apple/`: the macOS app in SwiftUI, a client of that service, and its `.dmg`.
 - the root crate (`tunnelbird`): the Linux app, GTK/libadwaita and
   NetworkManager. `main.rs` imports the core modules at the crate root, so
   `crate::config` and the like read the same in both crates.

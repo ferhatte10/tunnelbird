@@ -155,7 +155,10 @@ impl Backend for WindowsBackend {
             _ => Vec::new(),
         };
         self.running.insert(id.to_owned(), running);
-        Ok(Link { addresses })
+        Ok(Link {
+            addresses,
+            ..Link::default()
+        })
     }
 
     fn stop(&mut self, id: &str) -> Result<(), String> {

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>Tunnelbird</string>
+  <key>CFBundleDisplayName</key><string>Tunnelbird</string>
+  <key>CFBundleIdentifier</key><string>fr.ferhatsn.Tunnelbird</string>
+  <key>CFBundleExecutable</key><string>Tunnelbird</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>0.1.0</string>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <key>CFBundleLocalizations</key><array><string>en</string><string>fr</string></array>
+  <key>LSMinimumSystemVersion</key><string>13.0</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSLocationUsageDescription</key><string>macOS only tells apps the name of your Wi-Fi with this permission. Tunnelbird uses the name to recognize your trusted networks, and never your location.</string>
+</dict>
+</plist>

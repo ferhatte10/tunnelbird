@@ -23,6 +23,7 @@
 pub mod config;
 pub mod health;
 pub mod i18n;
+pub mod logs;
 pub mod ovpn;
 pub mod plan;
 pub mod profile;
