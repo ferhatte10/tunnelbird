@@ -74,11 +74,20 @@ fn opened_device(line: &str) -> Option<&str> {
         .map(|(_, device)| device.trim())
 }
 
-const CANDIDATES: [&str; 3] = [
-    "/Applications/Tunnelbird.app/Contents/Resources/openvpn",
-    "/opt/homebrew/sbin/openvpn",
-    "/usr/local/sbin/openvpn",
-];
+/// Root runs it, so only copies root alone can change: the one the installation
+/// put in the service's folder. Homebrew's belongs to the user: development only.
+fn candidates() -> Vec<PathBuf> {
+    let mut paths = vec![
+        Path::new(super::DATA_DIR)
+            .join(super::BUNDLED_OPENVPN)
+            .join("openvpn"),
+    ];
+    if cfg!(debug_assertions) {
+        paths.push(PathBuf::from("/opt/homebrew/sbin/openvpn"));
+        paths.push(PathBuf::from("/usr/local/sbin/openvpn"));
+    }
+    paths
+}
 
 pub struct Process {
     child: Child,
@@ -96,15 +105,23 @@ impl Process {
         profile: &str,
         login: Option<&Login>,
     ) -> Result<Self, String> {
-        let exe = CANDIDATES
-            .iter()
-            .map(Path::new)
+        let exe = candidates()
+            .into_iter()
             .find(|path| path.exists())
-            .ok_or("OpenVPN is not installed (brew install openvpn)")?;
+            .ok_or("OpenVPN is not installed: install the service again from the app")?;
+        // Moved from where it was built: OpenVPN cannot find this script alone.
+        let dns_script = exe.with_file_name("dns-updown");
         let config = run_dir.join(format!("{id}.ovpn"));
         write_private(&config, profile)?;
         let mut files = vec![config.clone()];
-        let mut command = Command::new(exe);
+        let mut command = Command::new(&exe);
+        if dns_script.exists() {
+            command
+                .arg("--script-security")
+                .arg("2")
+                .arg("--dns-updown")
+                .arg(&dns_script);
+        }
         command
             .arg("--config")
             .arg(&config)

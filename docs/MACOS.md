@@ -25,7 +25,7 @@ AI assistant. Read with `docs/plans/later.md` (decisions), `docs/PROTOCOL.md`
 | Service logic: requests, one tunnel at a time, storage, Unix socket | `crates/service/src/{service,store,transport}.rs` | Tested on Linux with a fake backend |
 | macOS backend: BoringTun on a `utun`, addresses/routes/DNS with `ifconfig`/`route`/`networksetup`, counters from `netstat`, OpenVPN through `openvpn`, launchd daemon | `crates/service/src/macos/` | Compiled and run on macOS 27.2, Apple silicon: WireGuard® connects and disconnects with DNS and routes restored. OpenVPN, launchd and Intel not run yet |
 | Menu bar app (SwiftUI) | `apple/` (`apple/build.sh`, no Xcode needed) | First version: tunnel list, connect, live traffic, import, delete, menu bar. Run by hand with the real service on macOS 27.2, Apple silicon. Location, server health, logs, editor, export, QR code, preferences, trusted networks, notifications and update notices written; checked with the fake service only, apart from what the owner tried by hand |
-| `.dmg` with the app, the helper and its install step | — | To write |
+| `.dmg` with the app, the helper and its install step | `apple/make-dmg.sh`; the app installs the service with the administrator's password | Written, to run |
 
 ## First run, step by step
 
@@ -81,6 +81,10 @@ Points to watch on the first real run (reasoned, not verified):
   run a file the user can change. Not `/Library/PrivilegedHelperTools/`: macOS
   27.2 killed it there (exit 137, launchd `OS_REASON_EXEC`), while the same file
   ran elsewhere. Only ad hoc signed program in that folder.
+- OpenVPN and its libraries come from Homebrew at build time
+  (`apple/bundle-openvpn.sh`) and are copied to the service's root-only folder at
+  installation. A release service only runs that copy: anyone can write in an app
+  under `/Applications`, and Homebrew's files belong to the user.
 - OpenVPN sets its own routes and DNS (`dns-updown`), and takes them down only
   when stopped with SIGTERM: a first run with SIGKILL left a route behind. It
   also picks its own `utun`, read from its log. Connects and passes traffic on
