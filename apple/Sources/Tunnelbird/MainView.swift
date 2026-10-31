@@ -156,25 +156,39 @@ struct MainView: View {
     }
 }
 
-/// The service is missing: the app can do nothing without it.
+/// Without the service the app can do nothing. On a first use nothing is wrong
+/// yet: the screen welcomes and offers to install, it does not raise an alarm.
 private struct UnavailableView: View {
     @EnvironmentObject private var model: Model
 
     var body: some View {
         VStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 40))
-                .foregroundStyle(.secondary)
-            Text("Tunnel Service Unavailable")
-                .font(.title2.weight(.semibold))
-            Text("Tunnelbird needs its service to manage VPN tunnels. Make sure it is running.")
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.secondary)
-            if let failure = model.failure {
-                Text(failure)
-                    .font(.caption)
+            if (model.serviceInstalled && !model.installing) || model.serviceInApp == nil {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.system(size: 40))
                     .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
+                Text("Tunnel Service Unavailable")
+                    .font(.title2.weight(.semibold))
+                Text("Tunnelbird needs its service to manage VPN tunnels. Make sure it is running.")
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.secondary)
+                if let failure = model.failure {
+                    Text(failure)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+            } else {
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .frame(width: 96, height: 96)
+                    .accessibilityHidden(true)
+                Text("Welcome to Tunnelbird")
+                    .font(.title2.weight(.semibold))
+                Text("One last step: Tunnelbird installs a small service that creates your VPN tunnels.")
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             if model.serviceInApp != nil {
                 Button {
@@ -185,6 +199,8 @@ private struct UnavailableView: View {
                             ProgressView().controlSize(.small)
                             Text("Installing…")
                         }
+                    } else if model.serviceInstalled {
+                        Text("Reinstall the Service…")
                     } else {
                         Text("Install the Service…")
                     }

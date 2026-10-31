@@ -452,6 +452,7 @@ pub fn uninstall() -> Result<(), String> {
         .args(["bootout", &format!("system/{LAUNCHD_LABEL}")])
         .status();
     let _ = std::fs::remove_file(INSTALLED_EXE);
+    let _ = std::fs::remove_file("/var/run/tunnelbird.sock");
     let _ = std::fs::remove_dir_all(PathBuf::from(DATA_DIR).join(BUNDLED_OPENVPN));
     std::fs::remove_file(&path).map_err(|err| format!("{path}: {err}"))
 }
