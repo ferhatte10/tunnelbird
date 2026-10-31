@@ -136,5 +136,6 @@ update the service, which an update of the app does not reach.
 1. Intel: needs `rustup`, Intel builds of OpenVPN's libraries, and a Mac to test.
 2. CI building the `.dmg`, and a published `latest.json` with the macOS download.
 3. The website's macOS tab with the “Open Anyway” screenshots, once a `.dmg` is
-   published. `docs/COMPATIBILITY.md` lists what has not run yet.
+   published. macOS first shows “Move to Trash” as its main button, next to
+   “Done”: the page must say to choose “Done”, then Privacy & Security. `docs/COMPATIBILITY.md` lists what has not run yet.
 4. The cause of the missing IPv6 through a WireGuard® tunnel.
