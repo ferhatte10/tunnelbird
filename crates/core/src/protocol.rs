@@ -18,10 +18,13 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::health::Health;
+use crate::logs::LogLine;
 use crate::profile::Kind;
+use crate::trust::{Decision, Network, Policy};
 
 /// Protocol version, checked by [`Request::Hello`].
-pub const VERSION: u32 = 1;
+pub const VERSION: u32 = 2;
 
 /// A request from the interface.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -75,6 +78,18 @@ pub enum RequestBody {
     Export {
         tunnel: String,
     },
+    /// The tunnel's logs of this session. New lines then come as
+    /// [`Event::Log`]. Answer: [`ResponseBody::Logs`].
+    Logs {
+        tunnel: String,
+    },
+    /// What the rule of trusted networks says for a network the computer just
+    /// joined. The interface keeps the policy and acts on the answer: the
+    /// service connects nothing by itself. Answer: [`ResponseBody::TrustDecision`].
+    TrustDecision {
+        policy: Policy,
+        network: Network,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -117,6 +132,12 @@ pub enum ResponseBody {
     Text {
         text: String,
     },
+    Logs {
+        lines: Vec<LogLine>,
+    },
+    TrustDecision {
+        decision: Decision,
+    },
     /// The request failed. The interface shows its own translated text for
     /// `code`, with `message` (English) as the details.
     Error {
@@ -157,10 +178,18 @@ pub enum Event {
         error: Option<String>,
     },
     /// Interface counters of the connected tunnel, once a second.
-    Traffic { tunnel: String, counters: Counters },
+    Traffic {
+        tunnel: String,
+        counters: Counters,
+        /// Whether the server answers; left out by older services.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        health: Option<Health>,
+    },
     /// An OpenVPN server asks for the password; answer with a `connect` after
     /// an `update` carrying it, or cancel with a `disconnect`.
     PasswordNeeded { tunnel: String },
+    /// A new line in a tunnel's logs.
+    Log { tunnel: String, line: LogLine },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -298,6 +327,7 @@ mod tests {
                         rx_packets: 1,
                         tx_packets: 2,
                     },
+                    health: Some(Health::NoResponse),
                 },
             }),
         ];

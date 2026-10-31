@@ -25,12 +25,12 @@ shows the same thing as JSON, for the C# and Swift sides.
   each one with a response carrying the same `id`. The service also pushes
   events, without `id`, at any time.
 - Version: the first request is `hello`; any other request before a matching
-  version is refused with `version-mismatch`. Current version: **1**.
+  version is refused with `version-mismatch`. Current version: **2**.
 
 ## Requests (interface → service)
 
 ```json
-{"id":1,"request":"hello","version":1}
+{"id":1,"request":"hello","version":2}
 {"id":2,"request":"list-tunnels"}
 {"id":3,"request":"import","name":"Office","text":"client\nremote vpn.example.com 1194\n…","login":{"username":"alex","password":""}}
 {"id":4,"request":"update","tunnel":"a1","name":"Office","text":"…","login":{"username":"alex","password":"secret"}}
@@ -38,6 +38,8 @@ shows the same thing as JSON, for the C# and Swift sides.
 {"id":6,"request":"connect","tunnel":"a1"}
 {"id":7,"request":"disconnect","tunnel":"a1"}
 {"id":8,"request":"export","tunnel":"a1"}
+{"id":9,"request":"logs","tunnel":"a1"}
+{"id":10,"request":"trust-decision","policy":{"enabled":true,"tunnel":"a1","trusted_ssids":["Home"],"trust_wired":true,"strict":false,"pins":[]},"network":{"uuid":"wifi:Cafe","kind":"wifi","ssid":"Cafe","bssid":null}}
 ```
 
 - `text` is the `.conf` or `.ovpn` file as the user edited it, certificates
@@ -45,16 +47,19 @@ shows the same thing as JSON, for the C# and Swift sides.
   service checks it again.
 - `login` only for OpenVPN profiles that ask for a user name and password.
   An empty password is asked at each connection (`password-needed`).
+- `update` without `login` keeps the stored one.
 - `connect` disconnects any other tunnel first: one at a time, as on Linux.
 
 ## Responses (service → interface)
 
 ```json
-{"id":1,"response":"hello","version":1}
+{"id":1,"response":"hello","version":2}
 {"id":2,"response":"tunnels","tunnels":[{"id":"a1","name":"Office","kind":"openvpn","endpoint":"vpn.example.com:1194","addresses":[],"full_tunnel":true,"state":"disconnected"}]}
 {"id":3,"response":"tunnel","tunnel":{"id":"a1","name":"Office","kind":"openvpn","addresses":[],"full_tunnel":true,"state":"disconnected"}}
 {"id":5,"response":"ok"}
 {"id":8,"response":"text","text":"client\n…"}
+{"id":10,"response":"trust-decision","decision":{"decision":"connect"}}
+{"id":9,"response":"logs","lines":[{"time":1793404800,"source":"service","severity":"info","message":"Connected"}]}
 {"id":6,"response":"error","code":"connection-failed","message":"The VPN driver is not installed"}
 ```
 
@@ -71,14 +76,21 @@ shows the same thing as JSON, for the C# and Swift sides.
 {"event":"tunnels-changed","tunnels":[…]}
 {"event":"state","tunnel":"a1","state":"connecting"}
 {"event":"state","tunnel":"a1","state":"disconnected","error":"The server does not answer"}
-{"event":"traffic","tunnel":"a1","counters":{"rx_bytes":1048576,"tx_bytes":65536,"rx_packets":900,"tx_packets":400}}
+{"event":"traffic","tunnel":"a1","counters":{"rx_bytes":1048576,"tx_bytes":65536,"rx_packets":900,"tx_packets":400},"health":"ok"}
 {"event":"password-needed","tunnel":"a1"}
+{"event":"log","tunnel":"a1","line":{"time":1793404801,"source":"openvpn","severity":"warning","message":"…"}}
 ```
 
+- Logs: per tunnel, in memory, for the service's session. `source` is `service`,
+  `wireguard` or `openvpn`, `severity` is `info`, `warning` or `error`. A tunnel that stops
+  on its own sends a `state` event with its `error`, and a log line.
 - States: `disconnected`, `connecting`, `connected`, `disconnecting`.
 - `traffic` comes once a second for the connected tunnel; counters are
-  cumulative, the interface computes rates and the server health exactly like
-  the Linux app (`tunnelbird_core::health`).
+  cumulative and the interface computes the rates. `health` comes from the
+  service (`tunnelbird_core::health`, as in the Linux app): `unknown`, `ok`, or
+  `no-response` when packets go out and none come back. It may be left out.
+- A connected tunnel's `full_tunnel` and `addresses` come from the running
+  tunnel when it knows better than its file: an OpenVPN server decides them.
 
 ## What the service guarantees
 
@@ -87,6 +99,7 @@ shows the same thing as JSON, for the C# and Swift sides.
 - Tunnels are stored readable by the service only: on Windows encrypted with
   DPAPI under `%ProgramData%\Tunnelbird`, on macOS in
   `/Library/Application Support/Tunnelbird` (root, mode 0600).
-- It never connects anything by itself: automatic connection on untrusted
-  networks is decided by the interface (`tunnelbird_core::trust`), which
-  sends `connect`.
+- It never connects anything by itself: the interface keeps the trusted
+  networks, asks `trust-decision` when the computer joins a network (the rule is
+  `tunnelbird_core::trust`), then sends `connect` if the answer says so. `pin`
+  also carries the access point to remember.

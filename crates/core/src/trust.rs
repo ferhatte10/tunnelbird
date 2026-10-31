@@ -14,8 +14,10 @@
 //! pinned when trusting the network you are on, or learned the first time you
 //! join a network trusted from the saved list.
 
+use serde::{Deserialize, Serialize};
+
 /// What the computer is connected to, as far as trust is concerned.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Network {
     /// NetworkManager profile UUID: identifies "joining a new network".
     pub uuid: String,
@@ -26,7 +28,8 @@ pub struct Network {
     pub bssid: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum NetworkKind {
     Wifi,
     Wired,
@@ -35,14 +38,15 @@ pub enum NetworkKind {
 }
 
 /// An access point the user trusts, for the strict check.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Pin {
     pub bssid: String,
     pub ssid: String,
 }
 
 /// The user's choices, from the preferences file.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Policy {
     pub enabled: bool,
     /// UUID of the tunnel to connect.
@@ -54,7 +58,8 @@ pub struct Policy {
     pub pins: Vec<Pin>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "decision", rename_all = "kebab-case")]
 pub enum Decision {
     /// Trusted network: do nothing.
     Stay,

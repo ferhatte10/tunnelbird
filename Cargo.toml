@@ -9,6 +9,11 @@ homepage = "https://ferhatsn.fr"
 
 [workspace]
 members = ["crates/core", "crates/service"]
+exclude = ["vendor"]
+
+# BoringTun with one change for macOS: see vendor/boringtun/PATCHES.md.
+[patch.crates-io]
+boringtun = { path = "vendor/boringtun" }
 
 [dependencies]
 adw = { version = "0.9.2", package = "libadwaita", features = ["v1_5"] }
