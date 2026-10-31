@@ -7,6 +7,8 @@ struct ImportedFile: Identifiable {
     let id = UUID()
     let url: URL
     let text: String
+    /// Certificates and keys found with the file, by name.
+    let files: [String: String]
 }
 
 /// What the file says, for the preview. The service checks the file again with
@@ -122,7 +124,7 @@ struct ImportSheet: View {
             do {
                 let login = preview.asksLogin ? (username, password) : nil
                 try await model.importTunnel(
-                    name: name.trimmingCharacters(in: .whitespaces), text: file.text, login: login)
+                    name: name.trimmingCharacters(in: .whitespaces), text: file.text, login: login, files: file.files)
                 dismiss()
             } catch let error as ServiceError {
                 failure = error.details

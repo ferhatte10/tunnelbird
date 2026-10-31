@@ -43,7 +43,8 @@ shows the same thing as JSON, for the C# and Swift sides.
 ```
 
 - `text` is the `.conf` or `.ovpn` file as the user edited it, certificates
-  inline. The interface checks it first with the same parser (the core), the
+  inline, or named in the file and sent in `files` (`{"ca.crt":"…"}`) for `import`:
+  the service stores them inside the profile. The interface checks it first with the same parser (the core), the
   service checks it again.
 - `login` only for OpenVPN profiles that ask for a user name and password.
   An empty password is asked at each connection (`password-needed`).
