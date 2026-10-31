@@ -35,6 +35,8 @@ NetworkManager over D-Bus and never runs as root. It does not manage servers.
   storage and Unix socket tested with a fake backend (`--fake`); `windows/`
   and `macos/` backends written but never run on those systems
   (`docs/WINDOWS.md`, `docs/MACOS.md`: first-run steps and AI prompts).
+- `apple/` — the macOS app (SwiftUI, `apple/build.sh`), talks to the service.
+- `vendor/boringtun/` — BoringTun with one macOS patch (`PATCHES.md` there).
 - `crates/core/src/plan.rs` — a WireGuard® tunnel as Windows/macOS apply it
   (keys, routes with the server bypass, DNS, UAPI text).
 - `src/nm.rs` — D-Bus proxies and `WgConfig` → NetworkManager settings.

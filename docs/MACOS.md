@@ -17,14 +17,14 @@ AI assistant. Read with `docs/plans/later.md` (decisions), `docs/PROTOCOL.md`
 - Identity: the Tunnelbird icon as is (never redrawn), English and French, no
   legal/trademark notice in the interface; WireGuard® only as the tunnel type.
 
-## What exists (written on Linux, NOT YET RUN on a Mac)
+## What exists
 
 | Piece | Where | State |
 |---|---|---|
 | Shared logic: `.conf`/`.ovpn` parsers, providers, trusted networks, server health, versions, protocol, tunnel plan | `crates/core` | Tested (36 tests) |
 | Service logic: requests, one tunnel at a time, storage, Unix socket | `crates/service/src/{service,store,transport}.rs` | Tested on Linux with a fake backend |
-| macOS backend: BoringTun on a `utun`, addresses/routes/DNS with `ifconfig`/`route`/`networksetup`, counters from `netstat`, OpenVPN through `openvpn`, launchd daemon | `crates/service/src/macos/` | Written, **never compiled for macOS** (no Apple C compiler on the Linux PC for `ring`) |
-| Menu bar app (SwiftUI) | — | To write |
+| macOS backend: BoringTun on a `utun`, addresses/routes/DNS with `ifconfig`/`route`/`networksetup`, counters from `netstat`, OpenVPN through `openvpn`, launchd daemon | `crates/service/src/macos/` | Compiled and run on macOS 27.2, Apple silicon: WireGuard® connects and disconnects with DNS and routes restored. OpenVPN, launchd and Intel not run yet |
+| Menu bar app (SwiftUI) | `apple/` (`apple/build.sh`, no Xcode needed) | First version: tunnel list, connect, live traffic, import, delete, menu bar. Run by hand with the real service on macOS 27.2, Apple silicon. Location, server health, logs, editor, export, QR code, preferences, trusted networks, notifications and update notices written; checked with the fake service only, apart from what the owner tried by hand |
 | `.dmg` with the app, the helper and its install step | — | To write |
 
 ## First run, step by step
@@ -33,15 +33,14 @@ AI assistant. Read with `docs/plans/later.md` (decisions), `docs/PROTOCOL.md`
    Rust (`curl https://sh.rustup.rs | sh`), Homebrew, then
    `brew install openvpn` (for OpenVPN profiles).
 2. Get the code: `git clone https://github.com/ferhatte10/tunnelbird` then
-   `git switch feat/tunnelbird-v0.1` (or `main` once merged).
-3. Compile: `cargo build -p tunnelbird-service`. Fix what the compiler says in
-   `crates/service/src/macos/`: it was never compiled for macOS.
+   work from `main`.
+3. Compile: `cargo build -p tunnelbird-service`.
 4. Tests: `cargo test -p tunnelbird-core -p tunnelbird-service` (the root
    crate is the Linux GTK app: not for macOS).
 5. Protocol check without touching the network:
    `cargo run -p tunnelbird-service -- --fake --socket /tmp/tb.sock`, then in
    another terminal `nc -U /tmp/tb.sock` and type
-   `{"id":1,"request":"hello","version":1}` (see docs/PROTOCOL.md for more).
+   `{"id":1,"request":"hello","version":2}` (see docs/PROTOCOL.md for more).
 6. Real tunnel, as root (it creates an interface and changes routes and DNS):
    `sudo ./target/debug/tunnelbird-service --daemon --socket /tmp/tb.sock`,
    then `hello`, `import` a WireGuard® file, `connect`. Check:
@@ -60,13 +59,59 @@ Points to watch on the first real run (reasoned, not verified):
   `tunnelbird_core::plan::WgPlan::uapi` (tested against the protocol).
 - `ifconfig utunN inet A/32 A alias` for IPv4 point-to-point addresses.
 - DNS through `networksetup` on every network service, restored on
-  disconnect (`macos/net.rs`, `Dns`): check a crash does not leave the
-  tunnel's DNS in place (if it does, restore at daemon start).
+  disconnect (`macos/net.rs`, `Journal`). A crash leaves it in place, so it is
+  written down first and the next daemon start undoes it (run with
+  `kill -9`: DNS on all services and the scoped route came back). SIGTERM and Ctrl+C restore it at once
+  (`restore_network_on_stop`, still to run).
+- The Wi-Fi name: macOS hides it from apps without the location permission
+  (`ipconfig getsummary` shows `<redacted>`). The app asks for it, for trusted
+  networks only; without it every Wi-Fi counts as untrusted.
+- With the Wi-Fi down, the network path stays on Ethernet-like interfaces
+  (Thunderbolt) that lead nowhere: the app reads what is really in use from
+  `scutil --nwi`, 3 seconds after the last change, for trusted networks.
+- The system removes the scoped default route when its interface goes down:
+  `Journal::scope_to` checks the routing table, not only its own notes.
+- The command line tools 27.2 (Swift 6.4) broke the app's build: their SDK 27
+  turns `@State` into a macro whose plugin only comes with Xcode.
+  `apple/build.sh` uses SDK 26 from the same tools. Xcode would also fix it.
+- Swift has no test runner with the command line tools alone (XCTest and Swift
+  Testing both fail): logic stays in Rust, where it is tested, and the app asks
+  the service (`health`, `trust-decision`).
+- `--install-daemon` copies the program to a root-only folder: root must never
+  run a file the user can change. Not `/Library/PrivilegedHelperTools/`: macOS
+  27.2 killed it there (exit 137, launchd `OS_REASON_EXEC`), while the same file
+  ran elsewhere. Only ad hoc signed program in that folder.
+- OpenVPN sets its own routes and DNS (`dns-updown`), and takes them down only
+  when stopped with SIGTERM: a first run with SIGKILL left a route behind. It
+  also picks its own `utun`, read from its log. Connects and passes traffic on
+  a real server, and a clean stop leaves routes and DNS as they were. After a
+  SIGKILL, its DNS stays in the system's `Setup:` key: `networksetup
+  -setdnsservers <service> Empty` clears it (run once by hand).
+- OpenVPN outlives a daemon killed with `kill -9`, tunnel up (seen for 13 s);
+  the next daemon start stops it and everything comes back (run). It might still
+  die later on a closed log pipe, leaving its DNS behind: not seen, not ruled out.
+- IPv6 leak: a full tunnel carrying only IPv4 left IPv6 on the real network, and
+  location websites showed the real place (seen on a real OpenVPN run). Blocked
+  as on Linux with `reject` routes on `::/1` and `8000::/1`
+  (`Journal::block_ipv6`). Run with OpenVPN: `curl -6` fails, IPv4 passes, the
+  routes go away on disconnect. Not run yet with a WireGuard® file carrying
+  only IPv4.
+- The tunnel's UDP sockets are bound to the physical interface (`IP_BOUND_IF`)
+  instead of a host route to the server, so a website on the server's address
+  also goes through the tunnel. BoringTun has no such option:
+  `vendor/boringtun/PATCHES.md`. A bound socket also needs a default route
+  scoped to its interface (`route add -ifscope`), or the tunnel's `0/1` and
+  `128.0/1` routes make it fail with “Network is unreachable”: seen on a real
+  run. `Journal::scope_to` adds it: run on a real tunnel, a website on the
+  server's address opens through the tunnel. `follow_network` follows network
+  changes: a switch to a phone's Wi-Fi hotspot and back kept the tunnel up, one
+  ping lost. A switch to another interface (Ethernet) has not run: no cable at
+  hand, and the rebinding it needs is only reasoned.
 - The socket `/var/run/tunnelbird.sock` must be owned `root:admin`, mode 0660.
 
 ## Still to build
 
-1. **SwiftUI menu bar app** (`apple/` folder, Xcode project): connects to
+1. **SwiftUI menu bar app** (`apple/` folder, Swift package): connects to
    `/var/run/tunnelbird.sock`, sends the JSON lines of docs/PROTOCOL.md,
    shows the tunnel list, connect switch, live traffic (from `traffic`
    events), import (file picker → text → `import`), editor, preferences
