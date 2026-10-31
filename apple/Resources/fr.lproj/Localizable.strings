@@ -164,3 +164,5 @@
 "Tunnel Service" = "Service de tunnels";
 "Tunnelbird needs your password once, to install the service that creates the tunnels." = "Tunnelbird a besoin de votre mot de passe une fois, pour installer le service qui crée les tunnels.";
 "Tunnels stop working until it is installed again. Your tunnels are kept." = "Les tunnels ne marchent plus jusqu’à sa réinstallation. Vos tunnels sont conservés.";
+"One last step: Tunnelbird installs a small service that creates your VPN tunnels." = "Dernière étape : Tunnelbird installe un petit service qui crée vos tunnels VPN.";
+"Welcome to Tunnelbird" = "Bienvenue dans Tunnelbird";

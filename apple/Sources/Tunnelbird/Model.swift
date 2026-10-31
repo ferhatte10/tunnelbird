@@ -394,6 +394,12 @@ final class Model: ObservableObject {
         }
     }
 
+    /// True once the service was installed, running or not.
+    var serviceInstalled: Bool {
+        FileManager.default.fileExists(
+            atPath: "/Library/LaunchDaemons/fr.ferhatsn.Tunnelbird.Service.plist")
+    }
+
     /// The service carried by the app, if this build has one.
     var serviceInApp: URL? {
         Bundle.main.url(forResource: "tunnelbird-service", withExtension: nil)
@@ -412,14 +418,30 @@ final class Model: ObservableObject {
             let message = failure?[NSAppleScript.errorMessage] as? String
             let cancelled = failure?[NSAppleScript.errorNumber] as? Int == -128
             await MainActor.run { [weak self] in
-                self?.installing = false
                 if let message, !cancelled {
                     self?.problem = ProblemReport(
                         title: String(localized: "Cannot install the service"),
                         details: message)
                 }
+                guard failure == nil, argument == "--install-daemon" else {
+                    self?.installing = false
+                    return
+                }
+                Task { await self?.waitForService() }
             }
         }
+    }
+
+    /// launchd takes a moment to start what was just installed: the screen keeps
+    /// saying that it is installing rather than showing a service in trouble.
+    private func waitForService() async {
+        // A connection to the service that was just replaced is of no use.
+        connection?.disconnect()
+        for _ in 0..<30 where !ready {
+            if connection == nil { await open() }
+            if !ready { try? await Task.sleep(for: .milliseconds(500)) }
+        }
+        installing = false
     }
 
     /// Asks for every tunnel up to go down, and waits for the answers.
