@@ -95,7 +95,7 @@ jobs:
           }
           check / 200 'Tunnelbird'
           check /fr/ 200 'lang="fr"'
-          check /install/ 200 'install.sh'
+          check /install/ 200 'Requirements'
           check /docs/ 200
           check /privacy/ 200
           check /compatibility/ 200
