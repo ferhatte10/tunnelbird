@@ -1,7 +1,8 @@
 # Architecture
 
-Tunnelbird is a Cargo workspace with three crates. It holds no privilege and
-stores no secret itself.
+Tunnelbird is a Cargo workspace with three crates. The Linux app holds no
+privilege and stores no secret itself; on macOS the root service does both (see
+“macOS” below).
 
 - `crates/core` (`tunnelbird-core`): the logic every system shares, pure and
   unit-tested: the `.conf` and `.ovpn` parsers, providers, trusted networks,
@@ -52,6 +53,9 @@ stores no secret itself.
 | `src/update.rs` | How the app was installed, new version checks (`latest.json`, Flatpak portal), restart after an update. Unit-tested | `geo`, `portal`, `version` |
 | `src/demo.rs` | Demo mode (`TUNNELBIRD_DEMO`): made-up tunnels and traffic for store screenshots, isolated settings | `config`, `settings` |
 | `src/window.rs` | Builds the window, reacts to user actions and NetworkManager signals | all of the above |
+| `crates/service/src/{service,store,transport}.rs` | The tunnel service of macOS (and Windows): requests, one tunnel at a time, storage readable by root only, Unix socket or named pipe. Unit-tested with a fake backend | `core` |
+| `crates/service/src/macos/` | The macOS backend: BoringTun on a `utun`, routes and DNS with a journal, network changes, the OpenVPN process, the launchd daemon and its installation | `core`, `vendor/boringtun` |
+| `apple/Sources/Tunnelbird/` | The macOS app in SwiftUI: menu bar panel, main window, editor, preferences. Shows and sends clicks; it asks the service for decisions | the service, over the protocol |
 
 ## Key decisions
 
@@ -171,6 +175,45 @@ its BSSID; a network trusted from the saved list pins the first access point
 it is joined through. Unknown access points of a trusted name count as
 untrusted; Preferences then offer to trust that access point (new router,
 repeater). Pins are stored as `BSSID SSID` entries.
+
+## macOS
+
+There is no NetworkManager and no paid Apple account for the NetworkExtension
+framework, so a small helper runs as root, like `wg-quick` or Tunnelblick
+([MACOS.md](MACOS.md) has the details and what was seen on a real Mac).
+
+**Two programs.** The SwiftUI app runs as the user. The service
+(`tunnelbird-service --daemon`, a launchd daemon) runs as root and owns the
+tunnels. They talk over `/var/run/tunnelbird.sock` (owned `root:admin`, mode
+0660) with the JSON lines of [PROTOCOL.md](PROTOCOL.md). The app installs the
+service itself, once, and macOS asks for the administrator's password. The
+service is copied to a folder only root can write, because root must never run
+a file the user can change.
+
+**Logic stays in Rust.** The app does not reimplement the parsers, the trusted
+network rule or the server health check: it asks the service (`trust-decision`,
+`health` in traffic events), which uses the same core as the Linux app. Swift
+has no test runner with the command line tools alone, so logic that needs tests
+belongs in Rust.
+
+**WireGuard®.** BoringTun runs in the service on a `utun` interface;
+addresses, routes and DNS are set with `ifconfig`, `route` and `networksetup`.
+The tunnel's UDP sockets are bound to the physical interface instead of using a
+host route to the server (a patched copy of BoringTun lives in
+`vendor/boringtun`), so a website on the server's own address also goes
+through the tunnel. The service follows network changes.
+
+**OpenVPN.** The `openvpn` program, bundled in the app with its libraries and
+copied to a root-only folder at installation, is started by the service, which
+reads the real interface, addresses and routes back from it.
+
+**A crash must not break the network.** Every change to routes and DNS is
+written to a journal first. A service killed in the middle undoes the journal
+at its next start; a normal stop undoes it at once.
+
+**IPv6.** As on Linux, a full tunnel that carries only IPv4 would leave IPv6 on
+the real network. The service blocks it with `reject` routes on `::/1` and
+`8000::/1` while the tunnel is up.
 
 ## Updates
 

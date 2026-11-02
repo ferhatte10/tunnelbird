@@ -9,6 +9,8 @@ NetworkManager over D-Bus and never runs as root. It does not manage servers.
 2. `CONTRIBUTING.md` — code rules (no panics, gettext, GNOME HIG).
 3. `docs/TRADEMARK.md` — own identity: no third-party VPN name or logo in the UI,
    texts, names or icons (technical identifiers in code are fine).
+4. `docs/MACOS.md` — only when touching `apple/` or `crates/service/src/macos/`
+   (they build and run on a Mac only).
 
 ## Keep up to date
 
@@ -21,8 +23,8 @@ NetworkManager over D-Bus and never runs as root. It does not manage servers.
 - `website/` — the project's site (SvelteKit, static), see `website/README.md`
   and `website/DESIGN.md`.
 
-- `crates/core/` — `tunnelbird-core`, logic shared with future Windows/macOS
-  apps: no GTK, no D-Bus, no file system, everything unit-tested.
+- `crates/core/` — `tunnelbird-core`, logic shared with the macOS app and the
+  future Windows one: no GTK, no D-Bus, no file system, everything unit-tested.
   - `config.rs` — lenient `.conf` parser; `ovpn.rs` — `.ovpn` parser/writer;
     `profile.rs` picks the parser from the file's content.
   - `provider.rs` — provider detection table; add providers there, with a test.
@@ -66,4 +68,11 @@ NetworkManager over D-Bus and never runs as root. It does not manage servers.
 cargo run
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
+```
+
+On a Mac only (`docs/MACOS.md`):
+
+```sh
+apple/build.sh       # apple/build/Tunnelbird.app
+apple/make-dmg.sh    # the .dmg, needs Homebrew's openvpn
 ```

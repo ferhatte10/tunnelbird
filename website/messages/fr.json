@@ -143,7 +143,7 @@
 	"compat_files_ovpn": "Profils OpenVPN .ovpn, certificats inclus ou en fichiers séparés",
 	"compat_files_no": "Non pris en charge : l’obfuscation AmneziaWG, les paquets OpenVPN PKCS#12",
 	"compat_other_title": "Windows et macOS",
-	"compat_other_text": "Des applications natives sont en cours d’écriture sur le même cœur. Prévu : Windows 10 et 11, macOS 13 et plus récent.",
+	"compat_other_text": "L’application macOS est construite et en test, celle de Windows est en cours d’écriture, toutes deux sur le même cœur. Prévu : Windows 10 et 11, macOS 13 et plus récent.",
 	"not_found_title": "Page introuvable",
 	"not_found_text": "Cette page s’est envolée. Les liens ci-dessous sont toujours là.",
 	"error_title": "Un problème est survenu",

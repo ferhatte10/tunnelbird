@@ -33,7 +33,7 @@
 
 	const files: { name: () => string; state: Status }[] = [
 		{ name: m.compat_files_wg, state: 'tested' },
-		{ name: m.compat_files_ovpn, state: 'expected' },
+		{ name: m.compat_files_ovpn, state: 'tested' },
 		{ name: m.compat_files_no, state: 'no' }
 	];
 </script>
