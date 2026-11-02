@@ -462,15 +462,18 @@ fn delete_scoped((family, interface, _): &ScopedRoute) {
 
 fn save_changes(path: &Path, changes: &Changes) -> Result<(), String> {
     use std::io::Write;
-    use std::os::unix::fs::OpenOptionsExt;
     let text = serde_json::to_string(changes).map_err(|err| err.to_string())?;
     // Through a second file: a crash while writing leaves the old journal whole.
     let temporary = path.with_extension("tmp");
-    std::fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .mode(0o600)
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    // The tests of other systems build this file too, and have no mode.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    options
         .open(&temporary)
         .and_then(|mut file| file.write_all(text.as_bytes()))
         .and_then(|()| std::fs::rename(&temporary, path))
