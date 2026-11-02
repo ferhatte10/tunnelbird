@@ -48,7 +48,7 @@ display=tunnelbird-screenshots
 gnome-shell --unsafe-mode --headless --wayland --no-x11 --mode=user \
   --virtual-monitor 2800x2000 --wayland-display "$display" >"$WORK/shell.log" 2>&1 &
 shell=$!
-trap 'kill $shell 2>/dev/null' EXIT
+trap 'kill $shell 2>/dev/null || true' EXIT
 sleep 6
 
 for lang in en fr; do

@@ -30,6 +30,8 @@ USER_NAME=tunnelbird
 
 echo "==> Installing OpenVPN and Easy-RSA"
 export DEBIAN_FRONTEND=noninteractive
+# SSH passes on the caller's locale (fr_FR…), which the server does not have.
+export LC_ALL=C.UTF-8
 apt-get update -q
 apt-get install -y -q openvpn easy-rsa iptables iproute2 curl
 

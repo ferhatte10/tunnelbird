@@ -32,14 +32,17 @@ NetworkManager over D-Bus and never runs as root. It does not manage servers.
     (`docs/PROTOCOL.md`); renaming a field is a breaking change.
 - `src/openvpn.rs` — NetworkManager's OpenVPN settings and certificate files.
 - `crates/service/` — tunnel service for Windows/macOS: request handling,
-  storage and Unix socket tested with a fake backend (`--fake`); `windows/`
-  and `macos/` backends written but never run on those systems
-  (`docs/WINDOWS.md`, `docs/MACOS.md`: first-run steps and AI prompts).
+  storage and Unix socket tested with a fake backend (`--fake`); the `macos/`
+  backend runs on a Mac (`docs/MACOS.md`), the `windows/` one is written but has
+  never run (`docs/WINDOWS.md`: first-run steps and an AI prompt).
+- `apple/` — the macOS app (SwiftUI, `apple/build.sh`), talks to the service.
+- `vendor/boringtun/` — BoringTun with one macOS patch (`PATCHES.md` there).
 - `crates/core/src/plan.rs` — a WireGuard® tunnel as Windows/macOS apply it
   (keys, routes with the server bypass, DNS, UAPI text).
 - `src/nm.rs` — D-Bus proxies and `WgConfig` → NetworkManager settings.
 - `src/geo.rs` — public IP/location lookup (libsoup + serde), flags, country names.
 - `src/traffic.rs` — `/sys` counters and the Cairo graph.
+- `src/logs.rs` — the logs of a tunnel: this app's events and the system journal.
 - `src/window.rs` — UI; all errors go through `Ui::report_error`.
 - `src/settings.rs` / `src/preferences.rs` — preferences file and dialog.
 - `src/tray.rs` — top bar icon + menu (StatusNotifierItem + dbusmenu, own zbus code).

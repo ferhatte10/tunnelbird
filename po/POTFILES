@@ -4,5 +4,6 @@ src/editor.rs
 src/main.rs
 src/preferences.rs
 src/window.rs
+src/logs.rs
 src/share.rs
 src/portal.rs

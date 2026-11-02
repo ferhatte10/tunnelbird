@@ -41,6 +41,7 @@ pub async fn export_file(
     let dialog = gtk::FileDialog::builder()
         .title(gettext("Export Tunnel"))
         .initial_name(format!("{}.{extension}", file_stem(name)))
+        .initial_folder(&start_folder())
         .filters(&filters)
         .modal(true)
         .build();
@@ -170,8 +171,14 @@ fn qr_widget(code: &QrCode, name: &str) -> gtk::DrawingArea {
     area
 }
 
+/// Where file choosers open. Left alone, the desktop's chooser reopens the
+/// last folder used by any app, and shows an error if it no longer exists.
+pub fn start_folder() -> gio::File {
+    gio::File::for_path(glib::home_dir())
+}
+
 /// A file name from the tunnel name, without characters file systems dislike.
-fn file_stem(name: &str) -> String {
+pub fn file_stem(name: &str) -> String {
     let stem: String = name
         .chars()
         .map(|c| {

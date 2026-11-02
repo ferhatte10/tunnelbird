@@ -7,10 +7,12 @@
 //! No I/O here besides the store and the backend, so all of it is tested
 //! with fakes on any system.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use serde::{Deserialize, Serialize};
 use tunnelbird_core::config;
+use tunnelbird_core::health::{Health, HealthWatch};
+use tunnelbird_core::logs::{LogBook, LogLine, Severity, Source, read_openvpn_line};
 use tunnelbird_core::profile::{self, Profile};
 use tunnelbird_core::protocol::{
     Counters, ErrorCode, Event, Login, RequestBody, ResponseBody, State, Tunnel, VERSION,
@@ -44,6 +46,22 @@ pub trait Backend {
     fn stop(&mut self, id: &str) -> Result<(), String>;
     /// Cumulative counters of a running tunnel.
     fn counters(&self, id: &str) -> Option<Counters>;
+    /// What the tunnel reported since the last call.
+    fn take_logs(&mut self, _id: &str) -> Vec<BackendLine> {
+        Vec::new()
+    }
+    /// Why the running tunnel stopped on its own, if it did.
+    fn stopped(&mut self, _id: &str) -> Option<String> {
+        None
+    }
+}
+
+/// A line for the tunnel's logs. Only the macOS backend writes any so far.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+pub enum BackendLine {
+    /// As OpenVPN wrote it: its severity is read from the text.
+    Openvpn(String),
+    Wireguard(Severity, String),
 }
 
 /// What a started tunnel reports.
@@ -51,6 +69,9 @@ pub trait Backend {
 pub struct Link {
     /// This computer's addresses inside the VPN.
     pub addresses: Vec<String>,
+    /// All traffic goes through the tunnel, when the running tunnel knows
+    /// better than its file: an OpenVPN server decides the routes.
+    pub full_tunnel: Option<bool>,
 }
 
 pub struct Service<B, S> {
@@ -59,6 +80,9 @@ pub struct Service<B, S> {
     tunnels: Vec<Stored>,
     /// The connected tunnel and its addresses; one at a time.
     connected: Option<(String, Link)>,
+    health: HealthWatch,
+    last_health: Health,
+    logs: LogBook,
 }
 
 /// The answer to a request and what other clients must hear about.
@@ -72,14 +96,21 @@ impl<B: Backend, S: Store> Service<B, S> {
             store,
             tunnels,
             connected: None,
+            health: HealthWatch::default(),
+            last_health: Health::default(),
+            logs: LogBook::default(),
         })
     }
 
     pub fn handle(&mut self, request: RequestBody) -> Outcome {
         match request {
-            RequestBody::Hello { version } if version == VERSION => {
-                (ResponseBody::Hello { version: VERSION }, Vec::new())
-            }
+            RequestBody::Hello { version } if version == VERSION => (
+                ResponseBody::Hello {
+                    version: VERSION,
+                    service_version: Some(env!("CARGO_PKG_VERSION").to_owned()),
+                },
+                Vec::new(),
+            ),
             RequestBody::Hello { version } => error(
                 ErrorCode::VersionMismatch,
                 format!("The service speaks protocol {VERSION}, the interface {version}"),
@@ -90,7 +121,12 @@ impl<B: Backend, S: Store> Service<B, S> {
                 },
                 Vec::new(),
             ),
-            RequestBody::Import { name, text, login } => self.import(name, text, login),
+            RequestBody::Import {
+                name,
+                text,
+                login,
+                files,
+            } => self.import(name, text, login, files),
             RequestBody::Update {
                 tunnel,
                 name,
@@ -100,6 +136,21 @@ impl<B: Backend, S: Store> Service<B, S> {
             RequestBody::Delete { tunnel } => self.delete(&tunnel),
             RequestBody::Connect { tunnel } => self.connect(&tunnel),
             RequestBody::Disconnect { tunnel } => self.disconnect(&tunnel),
+            RequestBody::TrustDecision { policy, network } => (
+                ResponseBody::TrustDecision {
+                    decision: policy.decide(&network),
+                },
+                Vec::new(),
+            ),
+            RequestBody::Logs { tunnel } => match self.find(&tunnel) {
+                Some(_) => (
+                    ResponseBody::Logs {
+                        lines: self.logs.lines(&tunnel),
+                    },
+                    Vec::new(),
+                ),
+                None => unknown(&tunnel),
+            },
             RequestBody::Export { tunnel } => match self.find(&tunnel) {
                 Some(stored) => (
                     ResponseBody::Text {
@@ -113,17 +164,72 @@ impl<B: Backend, S: Store> Service<B, S> {
     }
 
     /// Called once a second: traffic of the connected tunnel.
-    pub fn tick(&self) -> Vec<Event> {
-        let Some((id, _)) = &self.connected else {
+    pub fn tick(&mut self) -> Vec<Event> {
+        let Some(id) = self.connected.as_ref().map(|(id, _)| id.clone()) else {
             return Vec::new();
         };
-        self.backend
-            .counters(id)
-            .map(|counters| Event::Traffic {
-                tunnel: id.clone(),
-                counters,
-            })
+        let mut events = self.backend_logs(&id);
+        if let Some(reason) = self.backend.stopped(&id) {
+            let message = format!("Stopped on its own: {reason}");
+            events.push(self.log(&id, Severity::Error, message));
+            events.extend(self.stop_connected(Some(reason)));
+            events.push(self.changed());
+            return events;
+        }
+        let Some(counters) = self.backend.counters(&id) else {
+            return events;
+        };
+        let health = self
+            .health
+            .record(&id, counters.rx_packets, counters.tx_packets);
+        if health != self.last_health {
+            if health == Health::NoResponse {
+                events.push(self.log(&id, Severity::Warning, "Server not responding".to_owned()));
+            } else if self.last_health == Health::NoResponse {
+                events.push(self.log(&id, Severity::Info, "Server responding again".to_owned()));
+            }
+            self.last_health = health;
+        }
+        events.push(Event::Traffic {
+            tunnel: id,
+            counters,
+            health: Some(health),
+        });
+        events
+    }
+
+    /// Records a line from the service itself.
+    fn log(&mut self, id: &str, severity: Severity, message: String) -> Event {
+        self.record(id, Source::Service, severity, message)
+    }
+
+    fn record(&mut self, id: &str, source: Source, severity: Severity, message: String) -> Event {
+        let line = LogLine {
+            time: unix_now(),
+            source,
+            severity,
+            message,
+        };
+        self.logs.push(id, line.clone());
+        Event::Log {
+            tunnel: id.to_owned(),
+            line,
+        }
+    }
+
+    fn backend_logs(&mut self, id: &str) -> Vec<Event> {
+        let lines = self.backend.take_logs(id);
+        lines
             .into_iter()
+            .map(|line| match line {
+                BackendLine::Openvpn(line) => {
+                    let (severity, text) = read_openvpn_line(&line);
+                    self.record(id, Source::Openvpn, severity, text.to_owned())
+                }
+                BackendLine::Wireguard(severity, text) => {
+                    self.record(id, Source::Wireguard, severity, text)
+                }
+            })
             .collect()
     }
 
@@ -135,7 +241,17 @@ impl<B: Backend, S: Store> Service<B, S> {
         self.tunnels.iter().find(|t| t.id == id)
     }
 
-    fn import(&mut self, name: String, text: String, login: Option<Login>) -> Outcome {
+    fn import(
+        &mut self,
+        name: String,
+        text: String,
+        login: Option<Login>,
+        files: BTreeMap<String, String>,
+    ) -> Outcome {
+        let text = match with_files_inside(text, &files) {
+            Ok(text) => text,
+            Err(message) => return error(ErrorCode::InvalidProfile, message),
+        };
         if let Err(message) = validate(&text, login.as_ref()) {
             return error(ErrorCode::InvalidProfile, message);
         }
@@ -154,9 +270,11 @@ impl<B: Backend, S: Store> Service<B, S> {
     }
 
     fn update(&mut self, id: &str, name: String, text: String, login: Option<Login>) -> Outcome {
-        if self.find(id).is_none() {
+        let Some(existing) = self.find(id) else {
             return unknown(id);
-        }
+        };
+        // The login never leaves the service: editing a file keeps it.
+        let login = login.or_else(|| existing.login.clone());
         if let Err(message) = validate(&text, login.as_ref()) {
             return error(ErrorCode::InvalidProfile, message);
         }
@@ -190,6 +308,7 @@ impl<B: Backend, S: Store> Service<B, S> {
             return error(ErrorCode::Internal, message);
         }
         self.tunnels.retain(|t| t.id != id);
+        self.logs.forget(id);
         events.push(self.changed());
         (ResponseBody::Ok, events)
     }
@@ -216,15 +335,19 @@ impl<B: Backend, S: Store> Service<B, S> {
             });
             return (ResponseBody::Ok, events);
         }
+        events.push(self.log(id, Severity::Info, "Connecting…".to_owned()));
         events.push(state(id, State::Connecting, None));
         match self.backend.start(id, &profile, stored.login.as_ref()) {
             Ok(link) => {
                 self.connected = Some((id.to_owned(), link));
+                events.extend(self.backend_logs(id));
+                events.push(self.log(id, Severity::Info, "Connected".to_owned()));
                 events.push(state(id, State::Connected, None));
                 events.push(self.changed());
                 (ResponseBody::Ok, events)
             }
             Err(message) => {
+                events.push(self.log(id, Severity::Error, format!("Cannot connect: {message}")));
                 events.push(state(id, State::Disconnected, Some(message.clone())));
                 events.push(self.changed());
                 (
@@ -262,11 +385,15 @@ impl<B: Backend, S: Store> Service<B, S> {
         let Some((id, _)) = self.connected.take() else {
             return Vec::new();
         };
+        self.health.reset();
+        self.last_health = Health::default();
         let mut events = vec![state(&id, State::Disconnecting, None)];
         let error = match self.backend.stop(&id) {
             Ok(()) => error,
             Err(message) => Some(message),
         };
+        events.extend(self.backend_logs(&id));
+        events.push(self.log(&id, Severity::Info, "Disconnected".to_owned()));
         events.push(state(&id, State::Disconnected, error));
         events
     }
@@ -300,9 +427,17 @@ impl<B: Backend, S: Store> Service<B, S> {
             endpoint: endpoint.as_deref(),
             dns: &dns,
         });
-        let (state, addresses) = match &self.connected {
-            Some((id, link)) if *id == stored.id => (State::Connected, link.addresses.clone()),
-            _ => (State::Disconnected, wireguard_addresses(profile.as_ref())),
+        let (state, addresses, full_tunnel) = match &self.connected {
+            Some((id, link)) if *id == stored.id => (
+                State::Connected,
+                link.addresses.clone(),
+                link.full_tunnel.unwrap_or(full_tunnel),
+            ),
+            _ => (
+                State::Disconnected,
+                wireguard_addresses(profile.as_ref()),
+                full_tunnel,
+            ),
         };
         Tunnel {
             id: stored.id.clone(),
@@ -317,8 +452,29 @@ impl<B: Backend, S: Store> Service<B, S> {
     }
 }
 
+fn unix_now() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |elapsed| elapsed.as_secs() as i64)
+}
+
 /// Checks a file as the Linux app does at import. OpenVPN certificates must
 /// be inline: the service never reads the user's files.
+fn with_files_inside(text: String, files: &BTreeMap<String, String>) -> Result<String, String> {
+    if !files.is_empty()
+        && let Ok(Profile::OpenVpn(mut config)) = profile::parse_bytes(text.as_bytes())
+    {
+        config
+            .resolve_files(|name| {
+                let base = std::path::Path::new(name).file_name()?.to_str()?;
+                files.get(base).cloned()
+            })
+            .map_err(|err| err.to_string())?;
+        return Ok(config.to_ovpn());
+    }
+    Ok(text)
+}
+
 pub fn validate(text: &str, login: Option<&Login>) -> Result<Profile, String> {
     let mut profile = profile::parse_bytes(text.as_bytes())?;
     if let Profile::OpenVpn(config) = &mut profile {
@@ -429,6 +585,7 @@ pub mod fake {
             self.running.insert(id.to_owned(), std::cell::Cell::new(0));
             Ok(Link {
                 addresses: vec!["10.99.0.2/24".to_owned()],
+                ..Link::default()
             })
         }
         fn stop(&mut self, id: &str) -> Result<(), String> {
@@ -471,6 +628,7 @@ mod tests {
             name: name.to_owned(),
             text: text.to_owned(),
             login,
+            files: BTreeMap::new(),
         }) {
             (ResponseBody::Tunnel { tunnel }, _) => tunnel.id,
             other => panic!("import failed: {other:?}"),
@@ -512,6 +670,7 @@ mod tests {
             name: "Bad".to_owned(),
             text: "client\nremote a.example\nca ca.crt\nauth-user-pass\n".to_owned(),
             login: None,
+            files: BTreeMap::new(),
         });
         assert!(matches!(
             response,
@@ -541,12 +700,196 @@ mod tests {
     }
 
     #[test]
+    fn logs_tell_what_happened_and_why() {
+        let mut service = service();
+        let good = import(&mut service, "A", WG, None);
+        let bad = import(
+            &mut service,
+            "B",
+            &WG.replace("vpn.example.com", "unreachable"),
+            None,
+        );
+
+        service.handle(RequestBody::Connect {
+            tunnel: bad.clone(),
+        });
+        let (response, _) = service.handle(RequestBody::Logs {
+            tunnel: bad.clone(),
+        });
+        let ResponseBody::Logs { lines } = response else {
+            panic!("no logs");
+        };
+        assert_eq!(lines.last().map(|l| l.severity), Some(Severity::Error));
+        assert!(lines.iter().any(|l| l.message.contains("does not answer")));
+
+        let (_, events) = service.handle(RequestBody::Connect {
+            tunnel: good.clone(),
+        });
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, Event::Log { tunnel, line }
+            if *tunnel == good && line.message == "Connected"))
+        );
+        service.handle(RequestBody::Disconnect {
+            tunnel: good.clone(),
+        });
+        let (response, _) = service.handle(RequestBody::Logs { tunnel: good });
+        let ResponseBody::Logs { lines } = response else {
+            panic!("no logs");
+        };
+        let messages: Vec<&str> = lines.iter().map(|l| l.message.as_str()).collect();
+        assert_eq!(messages, ["Connecting…", "Connected", "Disconnected"]);
+        assert_eq!(
+            service
+                .handle(RequestBody::Logs {
+                    tunnel: "nope".to_owned()
+                })
+                .0,
+            unknown("nope").0
+        );
+    }
+
+    #[test]
+    fn editing_keeps_the_login_unless_a_new_one_comes() {
+        let mut service = service();
+        let login = Login {
+            username: "alex".to_owned(),
+            password: "secret".to_owned(),
+        };
+        let tunnel = import(&mut service, "A", OVPN, Some(login.clone()));
+        let update = |text: &str, login| RequestBody::Update {
+            tunnel: tunnel.clone(),
+            name: "B".to_owned(),
+            text: text.to_owned(),
+            login,
+        };
+        let (response, _) = service.handle(update(OVPN, None));
+        assert!(matches!(response, ResponseBody::Tunnel { .. }));
+        assert_eq!(
+            service.find(&tunnel).and_then(|t| t.login.clone()),
+            Some(login)
+        );
+        let new = Login {
+            username: "sam".to_owned(),
+            password: String::new(),
+        };
+        service.handle(update(OVPN, Some(new.clone())));
+        assert_eq!(
+            service.find(&tunnel).and_then(|t| t.login.clone()),
+            Some(new)
+        );
+    }
+
+    #[test]
+    fn the_trust_rule_answers_without_connecting_anything() {
+        use tunnelbird_core::trust::{Decision, Network, NetworkKind, Policy};
+        let mut service = service();
+        let tunnel = import(&mut service, "A", WG, None);
+        let policy = Policy {
+            enabled: true,
+            tunnel,
+            trusted_ssids: vec!["Home".to_owned()],
+            ..Policy::default()
+        };
+        let joined = |ssid: &str| Network {
+            uuid: ssid.to_owned(),
+            kind: NetworkKind::Wifi,
+            ssid: Some(ssid.to_owned()),
+            bssid: None,
+        };
+        let ask = |service: &mut Service<_, _>, ssid| {
+            service.handle(RequestBody::TrustDecision {
+                policy: policy.clone(),
+                network: joined(ssid),
+            })
+        };
+        assert_eq!(
+            ask(&mut service, "Café").0,
+            ResponseBody::TrustDecision {
+                decision: Decision::Connect
+            }
+        );
+        assert_eq!(
+            ask(&mut service, "Home").0,
+            ResponseBody::TrustDecision {
+                decision: Decision::Stay
+            }
+        );
+        assert!(service.tick().is_empty());
+    }
+
+    #[test]
+    fn files_next_to_a_profile_are_stored_inside_it() {
+        let mut service = service();
+        let text = "client\nremote vpn.example.com 1194\nca folder/ca.crt\nauth-user-pass\n";
+        let login = Login {
+            username: "alex".to_owned(),
+            password: "secret".to_owned(),
+        };
+        let request = |files: BTreeMap<String, String>| RequestBody::Import {
+            name: "A".to_owned(),
+            text: text.to_owned(),
+            login: Some(login.clone()),
+            files,
+        };
+        let (response, _) = service.handle(request(BTreeMap::new()));
+        assert!(matches!(
+            response,
+            ResponseBody::Error {
+                code: ErrorCode::InvalidProfile,
+                ..
+            }
+        ));
+
+        let files = BTreeMap::from([("ca.crt".to_owned(), "X\n".to_owned())]);
+        let (response, _) = service.handle(request(files));
+        let ResponseBody::Tunnel { tunnel } = response else {
+            panic!("not imported: {response:?}");
+        };
+        let exported = service.handle(RequestBody::Export { tunnel: tunnel.id }).0;
+        let ResponseBody::Text { text } = exported else {
+            panic!("no text");
+        };
+        assert!(text.contains("<ca>\nX\n</ca>"), "{text}");
+        assert!(!text.contains("folder/ca.crt"));
+    }
+
+    #[test]
+    fn hello_says_which_version_of_the_service_this_is() {
+        assert_eq!(
+            service().handle(RequestBody::Hello { version: VERSION }).0,
+            ResponseBody::Hello {
+                version: VERSION,
+                service_version: Some(env!("CARGO_PKG_VERSION").to_owned()),
+            }
+        );
+    }
+
+    #[test]
+    fn traffic_events_carry_the_server_health() {
+        let mut service = service();
+        let tunnel = import(&mut service, "A", WG, None);
+        service.handle(RequestBody::Connect { tunnel });
+        assert!(!service.tick().is_empty());
+        // The fake server answers: packets come back from the second reading.
+        assert!(service.tick().iter().any(|e| matches!(
+            e,
+            Event::Traffic {
+                health: Some(Health::Ok),
+                ..
+            }
+        )));
+    }
+
+    #[test]
     fn openvpn_needs_a_user_name_and_asks_for_the_password() {
         let mut service = service();
         let (response, _) = service.handle(RequestBody::Import {
             name: "Office".to_owned(),
             text: OVPN.to_owned(),
             login: None,
+            files: BTreeMap::new(),
         });
         assert!(matches!(
             response,

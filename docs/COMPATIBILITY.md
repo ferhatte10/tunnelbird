@@ -94,7 +94,29 @@ Native apps on top of the same core (`crates/core`) and a tunnel service
 | System | Status | Targets |
 |---|---|---|
 | Windows | Planned. The tunnel service (WireGuardNT, ovpn-dco-win, named pipe, encrypted storage, Windows service) is written and compiles for Windows x64, never run yet; the interface is not written (docs/WINDOWS.md) | Windows 10 and 11, x64 and ARM64; WireGuard® through WireGuardNT, OpenVPN through ovpn-dco-win; interface in WinUI 3 |
-| macOS | Planned. The root helper (BoringTun, `openvpn`, launchd) is written, not compiled for macOS yet; the interface is not written (docs/MACOS.md) | macOS 13 Ventura and later, Apple silicon and Intel; interface in SwiftUI (menu bar app) |
+| macOS | In development, not released: see below | macOS 13 Ventura and later; interface in SwiftUI (menu bar app) |
+
+### macOS
+
+Everything marked **Tested** was run on a MacBook Air, Apple silicon, macOS 27.2,
+with the app installed from its `.dmg` built on that Mac.
+
+| Item | Status | Details |
+|---|---|---|
+| Apple silicon | **Tested** | macOS 27.2 |
+| Intel | Planned | Not built: no Intel Mac to test on |
+| macOS 13 to 26 | Expected | The target is 13; only 27.2 was run |
+| WireGuard® tunnels | **Tested** | Routes, DNS, public IP, disconnection, Wi-Fi change, a website on the server's own address |
+| OpenVPN tunnels | **Tested** | Certificates inline and as separate files, user name and password, routes and DNS pushed by the server, with the OpenVPN inside the app |
+| IPv6 leak protection | **Tested** with OpenVPN | Expected with a WireGuard® file carrying only IPv4: not run |
+| IPv6 through a WireGuard® tunnel | Unknown | No answer in the one test: cause not found yet |
+| Service crash | **Tested** | After `kill -9` the next start restores DNS and routes, and launchd restarts it |
+| Service stopped normally, with a tunnel up | Expected | Restores at once; not observed separately |
+| Install from the `.dmg`, from the app | **Tested** | With the administrator's password |
+| “Open Anyway” on a downloaded `.dmg` | **Tested** | With a `.dmg` marked as downloaded: macOS blocks the app, then System Settings › Privacy & Security opens it. Each user goes through it, no paid Apple account |
+| Switch to another interface (Ethernet) | Expected | Written, not run: no cable at hand |
+| Restart of the Mac | **Tested** | The service starts by itself; the network is untouched |
+| Start at login, notifications, QR code scanned by a phone, update notice | Expected | Written, not confirmed on a real run |
 
 Distribution on both: an installer from the website, no store, no paid
 account (see the plan for what this means for the first launch).

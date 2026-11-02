@@ -197,7 +197,7 @@ mod tests {
     #[test]
     fn self_hosted_and_lookalike_names_stay_unlabelled() {
         assert_eq!(
-            detect_with("homelab", Some("vpn.ferhatsn.fr:51820"), &["172.18.0.2"]),
+            detect_with("homelab", Some("vpn.example.com:51820"), &["172.18.0.2"]),
             None
         );
         // "olympia" contains "pia" but is not a word starting with it.
