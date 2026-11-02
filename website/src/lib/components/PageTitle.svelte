@@ -9,7 +9,7 @@
 	<title>{tab ?? title} · Tunnelbird</title>
 </svelte:head>
 
-<div class="flex flex-col gap-3 pt-10 pb-6 md:pt-14">
+<div class="enter flex flex-col gap-3 pt-10 pb-6 md:pt-14">
 	<h1 class="m-0 flex items-center gap-3.5 text-[clamp(2.2rem,5vw,3.25rem)] leading-tight font-extrabold">
 		<TriangleMark />{title}
 	</h1>

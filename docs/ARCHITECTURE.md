@@ -5,12 +5,14 @@ stores no secret itself.
 
 - `crates/core` (`tunnelbird-core`): the logic every system shares, pure and
   unit-tested: the `.conf` and `.ovpn` parsers, providers, trusted networks,
-  server health, versions. No GTK, no D-Bus, no file system: the Windows and
-  macOS apps planned in `docs/plans/later.md` will use it as it is.
-- `crates/service` (`tunnelbird-service`): the tunnel service of the future
-  Windows and macOS apps ([PROTOCOL.md](PROTOCOL.md)); its logic is tested
-  on Linux with a fake backend; the Windows and macOS backends are written
-  but not yet run there ([WINDOWS.md](WINDOWS.md), [MACOS.md](MACOS.md)).
+  server health, versions. No GTK, no D-Bus, no file system: the macOS service,
+  and the future Windows one, use it as it is.
+- `crates/service` (`tunnelbird-service`): the tunnel service of the macOS
+  app and the future Windows one ([PROTOCOL.md](PROTOCOL.md)); its logic is
+  tested with a fake backend. The macOS backend has run on a Mac
+  ([MACOS.md](MACOS.md)); the Windows one is written but has not run
+  ([WINDOWS.md](WINDOWS.md)).
+- `apple/`: the macOS app in SwiftUI, a client of that service, and its `.dmg`.
 - the root crate (`tunnelbird`): the Linux app, GTK/libadwaita and
   NetworkManager. `main.rs` imports the core modules at the crate root, so
   `crate::config` and the like read the same in both crates.
@@ -43,6 +45,7 @@ stores no secret itself.
 | `src/editor.rs` | Preview before import and editing; validates through `config::parse` | `config`, `share` |
 | `src/share.rs` | Export as `.conf` (mode 0600) and QR code (`qrcode` crate, drawn with Cairo) | `config` |
 | `crates/core/src/trust.rs` | Trusted networks rule: when joining which network connects which tunnel. Unit-tested | — |
+| `src/logs.rs` | The logs of a tunnel: this app's events merged with the system journal (`journalctl --follow`), or a notice when the journal cannot be read. Unit-tested | `nm` |
 | `src/traffic.rs` | Reads interface byte counters, draws the live graph with Cairo | — |
 | `crates/core/src/protocol.rs` | Messages between a native interface and the tunnel service on Windows and macOS (see [PROTOCOL.md](PROTOCOL.md)). Unit-tested | `profile` |
 | `crates/core/src/version.rs` | Version comparison, daily check timing, release notes from the metainfo. Unit-tested | — |

@@ -104,6 +104,24 @@ impl WgPlan {
             .any(|net| net.prefix == 0)
     }
 
+    /// True when all IPv4 goes through the tunnel but IPv6 does not: IPv6 would
+    /// leave outside the VPN and reveal the real address, so it must be blocked.
+    pub fn leaves_ipv6_outside(&self) -> bool {
+        let mut default_routes = self
+            .peers
+            .iter()
+            .flat_map(|p| &p.allowed_ips)
+            .filter(|net| net.prefix == 0);
+        let (mut ipv4, mut ipv6) = (false, false);
+        for net in &mut default_routes {
+            match net.addr {
+                IpAddr::V4(_) => ipv4 = true,
+                IpAddr::V6(_) => ipv6 = true,
+            }
+        }
+        ipv4 && !ipv6
+    }
+
     /// Routes to add through the tunnel. A default route (`/0`) becomes its
     /// two halves (`0.0.0.0/1` + `128.0.0.0/1`, `::/1` + `8000::/1`), as
     /// `wg-quick` does: they win over the system's default route without
@@ -258,6 +276,14 @@ mod tests {
             }]
         );
         assert!(self::plan("10.0.0.0/8").bypass(&[Some(server)]).is_empty());
+    }
+
+    #[test]
+    fn ipv6_is_left_outside_only_by_a_full_ipv4_tunnel() {
+        assert!(self::plan("0.0.0.0/0").leaves_ipv6_outside());
+        assert!(!self::plan("0.0.0.0/0, ::/0").leaves_ipv6_outside());
+        assert!(!self::plan("::/0").leaves_ipv6_outside());
+        assert!(!self::plan("10.0.0.0/8").leaves_ipv6_outside());
     }
 
     #[test]

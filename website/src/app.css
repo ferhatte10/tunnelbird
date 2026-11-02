@@ -59,6 +59,15 @@
 	color-scheme: dark;
 }
 
+/* Motion tokens (DESIGN.md, Motion). */
+:root {
+	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+	--motion-fast: 160ms;
+	--motion-base: 320ms;
+	--motion-slow: 700ms;
+	--motion-draw: 1.4s;
+}
+
 @theme inline {
 	--color-bg: var(--bg);
 	--color-bg-alt: var(--bg-alt);
@@ -133,7 +142,9 @@
 		*::before,
 		*::after {
 			transition-duration: 0.01ms !important;
+			transition-delay: 0s !important;
 			animation-duration: 0.01ms !important;
+			animation-delay: 0s !important;
 		}
 	}
 }
@@ -183,3 +194,151 @@
 		overflow-wrap: anywhere;
 	}
 }
+
+/* Motion (DESIGN.md). Hidden states only exist while an animation runs or
+   when JavaScript marked an element as waiting (`data-reveal`): without
+   JavaScript, everything is shown. */
+@keyframes rise {
+	from {
+		opacity: 0;
+		transform: translateY(1rem);
+	}
+}
+@keyframes settle {
+	from {
+		opacity: 0;
+		transform: translateY(1.5rem) scale(0.985);
+	}
+}
+@keyframes draw {
+	from {
+		stroke-dashoffset: 1;
+	}
+}
+@keyframes land {
+	from {
+		opacity: 0;
+		transform: translate(-70px, 34px) rotate(-14deg);
+	}
+}
+@keyframes page-out {
+	to {
+		opacity: 0;
+	}
+}
+@keyframes page-in {
+	from {
+		opacity: 0;
+		transform: translateY(0.75rem);
+	}
+}
+@keyframes join-left {
+	from {
+		transform: translateX(-45%);
+		opacity: 0;
+	}
+}
+@keyframes join-right {
+	from {
+		transform: translateX(45%);
+		opacity: 0;
+	}
+}
+
+@layer components {
+	/* Hero arrival: --d is the order in the cascade. */
+	.enter {
+		animation: rise var(--motion-slow) var(--ease-out) both;
+		animation-delay: calc(var(--d, 0) * 90ms);
+	}
+	.enter-settle {
+		animation: settle var(--motion-slow) var(--ease-out) both;
+		animation-delay: calc(var(--d, 0) * 90ms);
+	}
+	/* The section triangle: its two halves join. */
+	.tri-left,
+	.tri-right {
+		transform-box: fill-box;
+		transition:
+			transform var(--motion-slow) var(--ease-out),
+			opacity var(--motion-slow) var(--ease-out);
+		transition-delay: 120ms;
+	}
+	.enter .tri-left {
+		animation: join-left var(--motion-slow) var(--ease-out) 200ms both;
+	}
+	.enter .tri-right {
+		animation: join-right var(--motion-slow) var(--ease-out) 200ms both;
+	}
+	/* Sections on scroll (reveal.ts): --i staggers the members of a group. */
+	[data-reveal] {
+		transition:
+			opacity var(--motion-slow) var(--ease-out),
+			transform var(--motion-slow) var(--ease-out);
+		transition-delay: calc(var(--i, 0) * 80ms);
+	}
+	[data-reveal='pending'] {
+		opacity: 0;
+		transform: translateY(1.25rem);
+	}
+	[data-reveal='pending'] .tri-left {
+		transform: translateX(-45%);
+		opacity: 0;
+	}
+	[data-reveal='pending'] .tri-right {
+		transform: translateX(45%);
+		opacity: 0;
+	}
+	/* The flight line draws itself, then the swallow lands at its end. */
+	.flight-path {
+		stroke-dasharray: 1;
+		animation: draw var(--motion-draw) var(--ease-out) 350ms both;
+	}
+	.flight-swallow {
+		transform-box: fill-box;
+		transform-origin: center;
+		animation: land 900ms var(--ease-out) 1.1s both;
+	}
+	/* Buttons press under the finger or the mouse. */
+	.press {
+		transition-property: color, background-color, transform;
+		transition-duration: var(--motion-fast);
+		transition-timing-function: var(--ease-out);
+	}
+	.press:active {
+		transform: scale(0.97);
+	}
+	/* A newly chosen install tab. */
+	.tab-panel {
+		animation: rise var(--motion-base) var(--ease-out) both;
+	}
+}
+
+/* Between pages: a short cross-fade, the header stays still. Changing
+   language is a full load: the same fade (cross-document transitions). */
+@media (prefers-reduced-motion: no-preference) {
+	@view-transition {
+		navigation: auto;
+	}
+	header {
+		view-transition-name: site-header;
+	}
+	/* Fade-through, not a cross-fade: two pages of text never overlap. */
+	::view-transition-old(root) {
+		animation: page-out 140ms ease-in both;
+	}
+	::view-transition-new(root) {
+		animation: page-in var(--motion-base) var(--ease-out) 100ms both;
+	}
+	/* Day and night: the new theme spreads from the button (ThemeToggle). */
+	:root.theme-switching::view-transition-old(root),
+	:root.theme-switching::view-transition-new(root) {
+		animation: none;
+		mix-blend-mode: normal;
+	}
+	/* The whole page, header included, changes inside the circle. */
+	:root.theme-switching header {
+		view-transition-name: none;
+	}
+}
+

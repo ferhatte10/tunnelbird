@@ -34,6 +34,7 @@ provider or your own server, then connect in one click.
   hotspots; optional start at login, hidden in the top bar
 - Preferences: light, dark or system style; interface language; background mode
 - Clear error messages (invalid file, refused permission, unreachable server)
+- Logs of each tunnel, live, with the reason a connection failed or dropped
 - English and French, ready for more languages
 - Light and dark themes, follows the system style
 
