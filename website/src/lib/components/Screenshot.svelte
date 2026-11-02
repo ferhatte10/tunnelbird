@@ -1,34 +1,35 @@
 <script lang="ts">
 	import { getLocale } from '#lib/paraglide/runtime.js';
+	import { versioned } from '#lib/assets.js';
 
-	// A store screenshot in the visitor's language; `dark` names the variant
-	// shown with the dark theme, when there is one.
+	// A store screenshot in the visitor's language and theme: `<name>.png` and
+	// `<name>-dark.png`, the one not matching the theme hidden. `eager` loads
+	// both at once (the hero): the hidden one would else arrive late after a
+	// theme switch, or on load in dark mode.
 	let {
 		name,
-		dark,
 		alt,
 		eager = false,
 		class: className = ''
-	}: { name: string; dark?: string; alt: string; eager?: boolean; class?: string } = $props();
+	}: { name: string; alt: string; eager?: boolean; class?: string } = $props();
 
 	const base = $derived(`/screenshots/${getLocale()}`);
+	const loading = $derived(eager ? 'eager' : 'lazy');
 </script>
 
 <img
-	src="{base}/{name}.png"
+	src={versioned(`${base}/${name}.png`)}
 	{alt}
 	width="1412"
 	height="1500"
-	loading={eager ? 'eager' : 'lazy'}
-	class="block h-auto w-full {dark ? 'dark:hidden' : ''} {className}"
+	{loading}
+	class="block h-auto w-full dark:hidden {className}"
 />
-{#if dark}
-	<img
-		src="{base}/{dark}.png"
-		{alt}
-		width="1412"
-		height="1500"
-		loading="lazy"
-		class="hidden h-auto w-full dark:block {className}"
-	/>
-{/if}
+<img
+	src={versioned(`${base}/${name}-dark.png`)}
+	{alt}
+	width="1412"
+	height="1500"
+	{loading}
+	class="hidden h-auto w-full dark:block {className}"
+/>

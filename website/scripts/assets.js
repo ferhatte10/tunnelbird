@@ -3,7 +3,8 @@
 // the store listing (for “What's new”). Runs before dev, build and check.
 // The copies are not committed (see .gitignore).
 
-import { copyFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { copyFileSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -43,3 +44,22 @@ const releases = [...metainfo.matchAll(/<release version="([^"]+)" date="([^"]+)
 );
 mkdirSync(join(site, 'src/lib/generated'), { recursive: true });
 writeFileSync(join(site, 'src/lib/generated/releases.json'), JSON.stringify(releases, null, '\t') + '\n');
+
+// Fingerprints of the screenshots and films: the pages ask for
+// `/videos/en-dark.mp4?v=<fingerprint>` (src/lib/assets.ts), so a new version
+// has a new address and these files can be cached for a year (nginx).
+const fingerprints = {};
+function fingerprint(dir) {
+	for (const name of readdirSync(join(site, 'static', dir))) {
+		const path = join(dir, name);
+		if (statSync(join(site, 'static', path)).isDirectory()) {
+			fingerprint(path);
+		} else {
+			const bytes = readFileSync(join(site, 'static', path));
+			fingerprints['/' + path] = createHash('sha256').update(bytes).digest('hex').slice(0, 10);
+		}
+	}
+}
+fingerprint('screenshots');
+fingerprint('videos');
+writeFileSync(join(site, 'src/lib/generated/fingerprints.json'), JSON.stringify(fingerprints, null, '\t') + '\n');

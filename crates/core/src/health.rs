@@ -20,7 +20,8 @@ const WINDOW: usize = 15;
 /// Packets that must have been sent in the window for the silence to mean something.
 const MIN_SENT: u64 = 3;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum Health {
     /// Not enough traffic yet to tell.
     #[default]

@@ -8,10 +8,9 @@
 //! does not use it: NetworkManager plays this part.
 //!
 //! Status: request handling, storage and the Unix socket are tested with a
-//! fake backend. The Windows part (`windows/`: WireGuardNT, ovpn-dco-win,
-//! named pipe, DPAPI, Windows service) and the macOS part (`macos/`) are
-//! written and compile for their systems, but have not run there yet: see
-//! docs/WINDOWS.md and docs/MACOS.md.
+//! fake backend. The macOS part (`macos/`) has run on a Mac (docs/MACOS.md). The
+//! Windows part (`windows/`: WireGuardNT, ovpn-dco-win, named pipe, DPAPI,
+//! Windows service) is written but has not run there (docs/WINDOWS.md).
 //!
 //! Development run, anywhere Unix: `cargo run -p tunnelbird-service -- --fake`
 //! then talk to it with `nc -U "$XDG_RUNTIME_DIR/tunnelbird-dev.sock"`.
@@ -73,7 +72,7 @@ fn options() -> Result<Options, String> {
             "--socket" => options.socket = args.next().ok_or("--socket needs a path")?.into(),
             "--store" => options.store = Some(args.next().ok_or("--store needs a folder")?.into()),
             "--help" => {
-                return Err("usage: tunnelbird-service [--fake] [--socket PATH] [--store FOLDER]\n  --fake   scripted backend for development: nothing is connected for real\n  --store  keep tunnels in FOLDER (default with --fake: in memory)".to_owned());
+                return Err("usage: tunnelbird-service [--fake | --daemon | --install-daemon | --uninstall-daemon] [--socket PATH] [--store FOLDER]\n  --fake   scripted backend for development: nothing is connected for real\n  --daemon real tunnels, macOS only, as root\n  --install-daemon, --uninstall-daemon  the launchd daemon, macOS only, as root\n  --store  keep tunnels in FOLDER (default with --fake: in memory)".to_owned());
             }
             other => return Err(format!("Unknown option {other} (see --help)")),
         }
@@ -168,15 +167,18 @@ where
 /// The macOS daemon: real tunnels, tunnels kept in the root-only folder.
 #[cfg(target_os = "macos")]
 fn run_daemon(socket: &std::path::Path) -> Result<(), String> {
+    macos::restore_network_on_stop();
     let store = FileStore::open(macos::data_dir().join("tunnels"))?;
     let service = Service::new(macos::MacBackend::new()?, store)?;
     // The socket is ready to chown just after the listener binds: done from
     // a short-lived thread so serving starts at once.
-    std::thread::spawn(|| {
+    let path = socket.to_owned();
+    std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_millis(300));
-        if let Err(err) = macos::open_socket_to_admins() {
+        if let Err(err) = macos::open_socket_to_admins(&path) {
             eprintln!("Cannot open the socket to administrators: {err}");
         }
     });
-    serve(socket, service)
+    eprintln!("Listening on {}", socket.display());
+    transport::serve_unix(socket, service).map_err(|err| format!("{}: {err}", socket.display()))
 }
