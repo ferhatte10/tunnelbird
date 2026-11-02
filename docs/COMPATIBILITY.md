@@ -71,9 +71,16 @@ icon uses the StatusNotifierItem standard:
 |---|---|---|
 | WireGuard® `.conf` (`wg-quick` format, from providers, routers, wg-easy…) | **Tested** | Lenient reading, several peers, IPv4 and IPv6, DNS and search domains. `PostUp`/`Table`/scripts are listed as ignored |
 | AmneziaWG (obfuscated WireGuard®) | No | The kernel tunnel cannot apply obfuscation; a clear message says so |
-| OpenVPN `.ovpn` | **Tested** against a real server: parsing and export (see `build-aux/test-server`); connection through NetworkManager still to test | Certificates inline or as separate files, user name and password, `tls-auth`, `tls-crypt`, `tls-crypt-v2`, UDP and TCP, several servers |
+| OpenVPN `.ovpn` | **Tested** against a real server (see `build-aux/test-server`): parsing, export and connection through NetworkManager, with certificates and password, with a password only, and with separate certificate files | Certificates inline or as separate files, user name and password, `tls-auth`, `tls-crypt`, `tls-crypt-v2`, UDP and TCP, several servers |
 | OpenVPN with PKCS#12 (`.p12`) or static keys | No (yet) | A clear message asks for PEM certificates |
 | ZIP bundles | No | A message asks to extract them first |
+
+### Behaviour
+
+| Item | Status | Details |
+|---|---|---|
+| IPv6 leak protection (a full tunnel that carries only IPv4) | **Tested** | With an OpenVPN server carrying only IPv4: IPv6 is blocked while connected, and the location shown is the server's. Not run: Flatpak, Snap, a WireGuard® file without `::/0` |
+| Logs of a tunnel | Partly tested | The window and Save, by hand. Expected: Copy, the reason of a failed connection (wrong password), the notice in a Flatpak or a Snap, where the system journal cannot be read |
 
 ### Reference machine
 
@@ -94,7 +101,7 @@ Native apps on top of the same core (`crates/core`) and a tunnel service
 | System | Status | Targets |
 |---|---|---|
 | Windows | Planned. The tunnel service (WireGuardNT, ovpn-dco-win, named pipe, encrypted storage, Windows service) is written and compiles for Windows x64, never run yet; the interface is not written (docs/WINDOWS.md) | Windows 10 and 11, x64 and ARM64; WireGuard® through WireGuardNT, OpenVPN through ovpn-dco-win; interface in WinUI 3 |
-| macOS | In development, not released: see below | macOS 13 Ventura and later; interface in SwiftUI (menu bar app) |
+| macOS | Built and run on a Mac, not released yet: see below. The website says “coming soon” | macOS 13 Ventura and later; interface in SwiftUI (menu bar app); a `.dmg` from the website |
 
 ### macOS
 
@@ -117,6 +124,7 @@ with the app installed from its `.dmg` built on that Mac.
 | Switch to another interface (Ethernet) | Expected | Written, not run: no cable at hand |
 | Restart of the Mac | **Tested** | The service starts by itself; the network is untouched |
 | Start at login, notifications, QR code scanned by a phone, update notice | Expected | Written, not confirmed on a real run |
+| `.dmg` built by CI | Planned | Built by hand on the Mac for now (`docs/plans/ci-and-release.md`) |
 
 Distribution on both: an installer from the website, no store, no paid
 account (see the plan for what this means for the first launch).

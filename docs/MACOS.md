@@ -1,7 +1,9 @@
 # Tunnelbird on macOS: hand-off
 
-Everything needed to continue the macOS version on a Mac. Read with `docs/plans/later.md` (decisions), `docs/PROTOCOL.md`
-(interface ↔ service messages) and `docs/COMPATIBILITY.md`.
+The macOS version is built and runs on a Mac with Apple silicon; it is **not
+released**. This page is what is needed to run, test and continue it. Read it
+with `docs/plans/later.md` (decisions), `docs/PROTOCOL.md` (interface ↔ service
+messages) and `docs/COMPATIBILITY.md` (what was really run).
 
 ## Decisions already taken (do not reopen)
 
@@ -20,11 +22,11 @@ Everything needed to continue the macOS version on a Mac. Read with `docs/plans/
 
 | Piece | Where | State |
 |---|---|---|
-| Shared logic: `.conf`/`.ovpn` parsers, providers, trusted networks, server health, versions, protocol, tunnel plan | `crates/core` | Tested (36 tests) |
+| Shared logic: `.conf`/`.ovpn` parsers, providers, trusted networks, server health, versions, protocol, tunnel plan | `crates/core` | Tested (39 tests) |
 | Service logic: requests, one tunnel at a time, storage, Unix socket | `crates/service/src/{service,store,transport}.rs` | Tested on Linux with a fake backend |
 | macOS backend: BoringTun on a `utun`, addresses/routes/DNS with `ifconfig`/`route`/`networksetup`, counters from `netstat`, OpenVPN through `openvpn`, launchd daemon | `crates/service/src/macos/` | Compiled and run on macOS 27.2, Apple silicon: WireGuard® connects and disconnects with DNS and routes restored. OpenVPN, launchd and Intel not run yet |
-| Menu bar app (SwiftUI) | `apple/` (`apple/build.sh`, no Xcode needed) | First version: tunnel list, connect, live traffic, import, delete, menu bar. Run by hand with the real service on macOS 27.2, Apple silicon. Location, server health, logs, editor, export, QR code, preferences, trusted networks, notifications and update notices written; checked with the fake service only, apart from what the owner tried by hand |
-| `.dmg` with the app, the helper and its install step | `apple/make-dmg.sh`; the app installs the service with the administrator's password | Written, to run |
+| Menu bar app (SwiftUI) | `apple/` (`apple/build.sh`, no Xcode needed) | The features of the Linux app (README): tunnel list, import, field editor, export, QR code, public IP and location, live traffic, server health, logs of each tunnel, preferences, trusted networks, notifications, update notice, About window; English and French. Run with the real service on macOS 27.2, Apple silicon: what was seen is in COMPATIBILITY.md, which also lists what is only written |
+| `.dmg` with the app, the helper and its install step | `apple/make-dmg.sh`; the app installs, updates and removes the service with the administrator's password | Built and installed on a Mac, including “Open Anyway” on a downloaded copy. Built by hand: no CI yet |
 
 ## First run, step by step
 
@@ -51,7 +53,7 @@ Everything needed to continue the macOS version on a Mac. Read with `docs/plans/
    installs the launchd daemon (`/Library/LaunchDaemons/fr.ferhatsn.Tunnelbird.Service.plist`);
    `--uninstall-daemon` removes it.
 
-Points to watch on the first real run (reasoned, not verified):
+Notes from the first real runs (what was seen, and what is only reasoned):
 
 - `boringtun` 0.7.1 `DeviceHandle::new("utunN", …)` and its control socket
   `/var/run/wireguard/utunN.sock`; the UAPI text comes from
@@ -133,9 +135,16 @@ update the service, which an update of the app does not reach.
 
 ## Still to do
 
-1. Intel: needs `rustup`, Intel builds of OpenVPN's libraries, and a Mac to test.
-2. CI building the `.dmg`, and a published `latest.json` with the macOS download.
-3. The website's macOS tab with the “Open Anyway” screenshots, once a `.dmg` is
-   published. macOS first shows “Move to Trash” as its main button, next to
-   “Done”: the page must say to choose “Done”, then Privacy & Security. `docs/COMPATIBILITY.md` lists what has not run yet.
-4. The cause of the missing IPv6 through a WireGuard® tunnel.
+1. Release: for now the `.dmg` is built on the Mac. CI building it
+   (`docs/plans/ci-and-release.md`, “The macOS `.dmg`”) and a published
+   `latest.json` with the macOS download, so the update notice works.
+2. The website's macOS tab with the “Open Anyway” screenshots, once a `.dmg` is
+   published, then `AVAILABLE` in `website/src/lib/links.ts`. macOS first shows
+   “Move to Trash” as its main button, next to “Done”: the page must say to
+   choose “Done”, then Privacy & Security.
+3. Intel: needs `rustup`, Intel builds of OpenVPN's libraries, and a Mac to test.
+4. What `docs/COMPATIBILITY.md` marks as not run: macOS 13 to 26, a switch to
+   Ethernet, the IPv6 block with a WireGuard® file carrying only IPv4, the
+   service stopped normally with a tunnel up, start at login, notifications, a
+   QR code scanned by a phone, the update notice.
+5. The cause of the missing IPv6 through a WireGuard® tunnel.

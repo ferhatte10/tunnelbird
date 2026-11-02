@@ -1,6 +1,7 @@
 # Tunnelbird
 
-A lightweight, modern VPN client for the Linux desktop.
+A lightweight, modern VPN client for the Linux desktop, with a native macOS
+version on its way ([see below](#macos)).
 Import the `.conf` (WireGuard®) or `.ovpn` (OpenVPN) file from your VPN
 provider or your own server, then connect in one click.
 
@@ -24,6 +25,8 @@ provider or your own server, then connect in one click.
 - Live traffic graph and totals for the active tunnel
 - Warns when the server stops answering while the system still says
   “connected”, and when a tunnel drops on its own
+- Blocks IPv6 outside a full tunnel that carries only IPv4, so a website cannot
+  see your real address through IPv6
 - Preview and edit before importing; edit existing tunnels; export as a `.conf`
   or `.ovpn` file, or a WireGuard® tunnel as a QR code to scan with a phone
 - Top bar icon and menu: switch VPN, live traffic with a mini graph, location,
@@ -38,12 +41,18 @@ provider or your own server, then connect in one click.
 - English and French, ready for more languages
 - Light and dark themes, follows the system style
 
+These are the features of the Linux app. The macOS app has the same ones, in a
+menu bar app (see [macOS](#macos)).
+
 ## How it works
 
-Tunnelbird never runs as root. It hands tunnels to **NetworkManager** over D-Bus,
+On Linux, Tunnelbird never runs as root. It hands tunnels to **NetworkManager** over D-Bus,
 which creates the tunnel interface, sets routes and DNS, and asks for
 permission through polkit when needed. Imported tunnels therefore also appear in
 your system network settings and in `nmcli`.
+
+On macOS there is no NetworkManager: a small helper that runs as root makes the
+tunnels, and the app only talks to it.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
 
@@ -55,7 +64,7 @@ public IP address and its approximate location, to show where you appear to be.
 This single request reveals nothing beyond what any website sees. Nothing else
 leaves your computer. Partial tunnels are not looked up.
 
-## Requirements
+## Requirements (Linux)
 
 Full matrix (processors, distributions, desktops, tunnel files, what was
 tested on which machine): [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
@@ -71,7 +80,7 @@ tested on which machine): [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 - For the top bar icon on GNOME: the AppIndicator extension (enabled by default
   on Ubuntu). KDE Plasma supports it natively. Without it, closing the window quits
 
-## Build from source
+## Build from source (Linux)
 
 Ubuntu / Debian:
 
@@ -106,6 +115,42 @@ During development, `cargo run` is enough.
 - **Snap** (Ubuntu App Center): [snap](snap/README.md)
 
 What comes next (one-line installer, APT/DNF repositories, website): [docs/ROADMAP.md](docs/ROADMAP.md).
+
+## macOS
+
+A native macOS app (SwiftUI, in `apple/`) exists and runs on a Mac with Apple
+silicon, but it is **not released yet**: the website still says “coming soon”.
+What was really run, and on which machine, is in
+[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
+
+- A menu bar app and a main window with the features above: tunnel list,
+  import, editor, export, QR code, public IP and location, live traffic, server
+  health, logs of each tunnel, trusted networks, notifications, update notice.
+  English and French, light and dark.
+- WireGuard® and OpenVPN profiles. Nothing is bought: no App Store, no paid
+  Apple account. The app will be a `.dmg` downloaded from the website, with
+  OpenVPN inside.
+- A helper that runs as root (a launchd daemon) makes the tunnels. The app
+  installs it from its first screen, once, and macOS asks for the
+  administrator's password. It never connects anything by itself: the app
+  decides and asks it.
+- The app is not signed with a paid account, so macOS blocks its first launch of
+  each version: open System Settings › Privacy & Security and choose “Open
+  Anyway” (when macOS offers “Done” and “Move to Trash”, choose “Done”).
+- macOS 13 Ventura or later. Only macOS 27.2 on Apple silicon was run; Intel is
+  not built yet.
+
+Build it on a Mac, with the free command line tools, Rust and Homebrew
+(`brew install openvpn`):
+
+```sh
+apple/build.sh        # apple/build/Tunnelbird.app
+apple/make-dmg.sh     # apple/build/Tunnelbird-VERSION-ARCH.dmg
+```
+
+The helper's log is `/Library/Application Support/Tunnelbird/service.log`.
+Everything else (decisions, how to run and test, how to remove it):
+[docs/MACOS.md](docs/MACOS.md). Windows is planned, on the same core.
 
 ## Troubleshooting
 

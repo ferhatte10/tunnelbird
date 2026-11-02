@@ -14,6 +14,10 @@ G_MESSAGES_DEBUG=tunnelbird cargo run     # with debug logs
 make check                              # format, lints, tests, desktop file
 ```
 
+On a Mac, the app is in `apple/` and the service's macOS part in
+`crates/service/src/macos/`: see [docs/MACOS.md](docs/MACOS.md) (build with
+`apple/build.sh`; the Linux app does not build there).
+
 ## Code rules
 
 - **Never panic on runtime data.** No `unwrap()`/`expect()` on anything coming
