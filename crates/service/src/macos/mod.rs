@@ -7,7 +7,8 @@
 //! the Unix socket `/var/run/tunnelbird.sock` for the menu bar app.
 //! See docs/MACOS.md.
 //!
-//! WireGuard® has run on macOS; OpenVPN and launchd not yet (docs/MACOS.md).
+//! WireGuard®, OpenVPN and the launchd daemon have run on a Mac: what exactly is
+//! in docs/COMPATIBILITY.md, how to run it in docs/MACOS.md.
 
 pub mod net;
 pub mod openvpn;

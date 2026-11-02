@@ -83,9 +83,13 @@ Effort: a day or two.
 
 ## 3. macOS and Windows
 
-Today's app is Linux-only by design: GTK/libadwaita for the window and
+The Linux app is Linux-only by design: GTK/libadwaita for the window and
 NetworkManager for the tunnels. Other systems need another tunnel backend and,
 to feel native, another interface. What can be shared is the logic.
+
+**Where it stands**: the shared core and the service exist; the macOS app is
+built and runs on Apple silicon, not released (step 3); Windows is written but
+has never run (step 2).
 
 ### Step 1: a shared core (done, `crates/core`)
 
@@ -101,9 +105,9 @@ Started: the interface ↔ service protocol is defined and tested
 serves macOS. The service exists (`crates/service`): request handling, one
 tunnel at a time, storage and Unix socket, tested with a fake backend. Its
 Windows part (WireGuardNT, ovpn-dco-win, named pipe, DPAPI, Windows service)
-and its macOS part (BoringTun, `openvpn`, launchd) are written blind on
-Linux; the Windows part compiles for Windows. Hand-off with first-run steps
-and a prompt for an AI session: `docs/WINDOWS.md`, `docs/MACOS.md`.
+is written blind on Linux; it compiles for Windows but has never run. Its
+macOS part (BoringTun, `openvpn`, launchd) has since run on a Mac. Hand-off
+with first-run steps: `docs/WINDOWS.md`, `docs/MACOS.md`.
 
 - **Tunnels**: WireGuardNT (kernel driver, `wireguard.dll`, signed by its
   authors) for WireGuard, and OpenVPN's `ovpn-dco-win` driver for OpenVPN.
@@ -129,6 +133,12 @@ and a prompt for an AI session: `docs/WINDOWS.md`, `docs/MACOS.md`.
 
 ### Step 3: macOS
 
+**Status**: the app and the service are done and run on a MacBook Air (Apple
+silicon, macOS 27.2): WireGuard® and OpenVPN tunnels, IPv6 block, crash
+recovery, install from the `.dmg`, “Open Anyway”. Not released. What is left:
+CI building the `.dmg`, the website's macOS tab, Intel, and the cases
+`docs/COMPATIBILITY.md` marks as not run (`docs/MACOS.md`, “Still to do”).
+
 - **Distribution**: owner's decision, **no store and no paid Apple account**:
   a `.dmg` downloaded from the website.
 - **Consequence for the tunnels**: Apple's VPN framework (NetworkExtension)
@@ -145,7 +155,8 @@ and a prompt for an AI session: `docs/WINDOWS.md`, `docs/MACOS.md`.
   without changing the design much.
 - **Interface**: native **SwiftUI**, as a menu bar app (`MenuBarExtra`) with a
   main window, like most Mac VPN apps. It talks to the root helper over the
-  local socket with the same protocol as Windows. Built with Xcode (free).
+  local socket with the same protocol as Windows. Built with the free command
+  line tools (`apple/build.sh`); Xcode is not needed.
 - OpenVPN runs through the `openvpn` program started by the helper; WireGuard
   first.
 

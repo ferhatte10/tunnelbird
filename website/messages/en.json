@@ -143,7 +143,7 @@
 	"compat_files_ovpn": "OpenVPN .ovpn profiles, certificates inside or as separate files",
 	"compat_files_no": "Not supported: AmneziaWG obfuscation, OpenVPN PKCS#12 bundles",
 	"compat_other_title": "Windows and macOS",
-	"compat_other_text": "Native apps are being written on the same core. Planned: Windows 10 and 11, macOS 13 and later.",
+	"compat_other_text": "The macOS app is built and under test, the Windows one is being written, both on the same core. Planned: Windows 10 and 11, macOS 13 and later.",
 	"not_found_title": "Page not found",
 	"not_found_text": "This page flew away. The links below are still here.",
 	"error_title": "Something went wrong",

@@ -114,14 +114,25 @@ Budget per release: about 25 minutes over all jobs (free once public).
 - `windows-2025` and `macos-15`: clippy `-D warnings`, tests and a release
   build of `tunnelbird-core` (without gettext) and `tunnelbird-service`.
 - Path filter (`crates/`, `Cargo.lock`): those runners cost 2× and 10× the
-  minutes while private. Expected to fail at first: that code was written
-  without those systems (`docs/WINDOWS.md`, `docs/MACOS.md`).
+  minutes while private. The macOS code has run on a Mac; the Windows code was
+  written without Windows and may fail at first (`docs/WINDOWS.md`,
+  `docs/MACOS.md`).
 
 ### 6. `install-sh.yml` and `website.yml`
 
 - `install.sh --dry-run` in Ubuntu 24.04, Debian 13, Fedora 42 and Arch
   containers (pinned by digest): each must choose apt, apt, dnf, Flatpak.
 - `website.yml`: see `website.md`, “Deployment”.
+
+### 7. The macOS `.dmg` (not written yet)
+
+Today `apple/make-dmg.sh` runs on the owner's Mac. To build it in CI: a
+`macos-15` job (Apple silicon) on the tag, with `brew install openvpn`, running
+`apple/make-dmg.sh`; the `.dmg` goes to the release with its checksum and
+attestation, and `latest.json` gets the macOS download so the app's update
+notice works. The app is not signed with a paid account (`docs/MACOS.md`):
+users go through “Open Anyway”. Intel is a second job, once an Intel Mac can
+test it.
 
 ## Branch protection (when public)
 

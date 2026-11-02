@@ -91,4 +91,7 @@ binary: it tells the user what will happen and sends them to the right place.
 ## Later
 
 - Other languages through Weblate.
-- macOS and Windows clients on top of a shared Rust core.
+- macOS: the app and its service are built and run on Apple silicon
+  ([MACOS.md](MACOS.md)). To release: CI building the `.dmg`, its entry in
+  `latest.json`, the website's macOS tab, then Intel.
+- Windows client on top of the same core and service ([WINDOWS.md](WINDOWS.md)).
