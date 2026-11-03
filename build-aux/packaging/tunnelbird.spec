@@ -9,7 +9,7 @@
 %global debug_package %{nil}
 
 Name:           tunnelbird
-Version:        0.1.1
+Version:        0.1.2
 Release:        1%{?dist}
 Summary:        Connect to your VPN in one click
 License:        GPL-3.0-or-later
@@ -62,6 +62,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/fr.ferhatsn.Tu
 %{_datadir}/locale/*/LC_MESSAGES/tunnelbird.mo
 
 %changelog
+* Wed Nov 04 2026 Ferhat Saidoun <ferhatsnpro@gmail.com> - 0.1.2-1
+- Version number only, to try the update notice
+
 * Tue Nov 03 2026 Ferhat Saidoun <ferhatsnpro@gmail.com> - 0.1.1-1
 - Check for updates from the menus
 

@@ -113,6 +113,11 @@
   </keywords>
 
   <releases>
+    <release version="0.1.2" date="2026-11-04">
+      <description>
+        <p>Only the version number changes: this release is there to try the update notice.</p>
+      </description>
+    </release>
     <release version="0.1.1" date="2026-11-03">
       <description>
         <p>Updates are easier to follow.</p>
