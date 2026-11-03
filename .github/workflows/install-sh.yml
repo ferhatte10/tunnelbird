@@ -36,7 +36,7 @@ jobs:
             method: dnf
           - name: Arch Linux
             image: archlinux:latest@sha256:e82623936fa1a69700b48e98b058df6eaab18b737c27473a7234a40fdecb9413
-            method: flatpak
+            method: other
     name: ${{ matrix.name }}
     steps:
       - name: Checkout code

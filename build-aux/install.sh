@@ -8,19 +8,19 @@
 #   - Ubuntu, Debian, Mint, Pop!_OS…: Tunnelbird's signed APT repository, so
 #     updates arrive with the system updates;
 #   - Fedora, RHEL-like…: Tunnelbird's signed DNF repository, same;
-#   - anything else: the Flatpak from Flathub.
+#   - anything else: no package yet; the website says how to build from source
+#     (a self-contained package is planned). There is no store.
 # Administrator rights (sudo) are asked only for the steps that need them.
 #
 # Options:
 #   --dry-run          print the steps, change nothing
-#   --method NAME      force apt, dnf or flatpak
+#   --method NAME      force apt or dnf
 #   --help
 #
 # Source: https://github.com/ferhatte10/tunnelbird/blob/main/build-aux/install.sh
 set -eu
 
 SITE=https://tunnelbird.ferhatsn.fr
-APP_ID=fr.ferhatsn.Tunnelbird
 KEYRING=/etc/apt/keyrings/tunnelbird.gpg
 APT_SOURCE=/etc/apt/sources.list.d/tunnelbird.sources
 DNF_REPO=/etc/yum.repos.d/tunnelbird.repo
@@ -66,7 +66,7 @@ while [ $# -gt 0 ]; do
     --dry-run) dry_run=true ;;
     --method) shift; method=${1:-} ;;
     --help|-h)
-      echo "Usage: install.sh [--dry-run] [--method apt|dnf|flatpak]"
+      echo "Usage: install.sh [--dry-run] [--method apt|dnf]"
       echo "Installs Tunnelbird the best way for this system. See $SITE"
       exit 0 ;;
     *) fail "Unknown option $1 (see --help)" ;;
@@ -89,12 +89,12 @@ if [ -z "$method" ]; then
   case $ids in
     *" debian "*|*" ubuntu "*) method=apt ;;
     *" fedora "*|*" rhel "*|*" centos "*) method=dnf ;;
-    *) method=flatpak ;;
+    *) method=other ;;
   esac
-  # Packages exist for these two processors only; others use the Flatpak.
+  # Packages exist for these two processors only.
   case $arch in
     x86_64|aarch64) ;;
-    *) method=flatpak ;;
+    *) method=other ;;
   esac
 fi
 
@@ -116,7 +116,7 @@ fi
 
 case $method in
   apt)
-    command -v apt-get > /dev/null 2>&1 || fail "apt-get not found: try --method flatpak"
+    command -v apt-get > /dev/null 2>&1 || fail "apt-get not found: this system does not use APT"
     say "1/3 Trusting Tunnelbird's signing key"
     note "Packages are signed; the key only vouches for Tunnelbird's repository."
     root install -d -m 755 /etc/apt/keyrings
@@ -138,7 +138,7 @@ EOF
     ;;
 
   dnf)
-    command -v dnf > /dev/null 2>&1 || fail "dnf not found: try --method flatpak"
+    command -v dnf > /dev/null 2>&1 || fail "dnf not found: this system does not use DNF"
     say "1/2 Adding the repository (packages and index are signed)"
     write_root "$DNF_REPO" <<EOF
 [tunnelbird]
@@ -153,26 +153,13 @@ EOF
     root dnf install -y tunnelbird
     ;;
 
-  flatpak)
-    if ! command -v flatpak > /dev/null 2>&1; then
-      case $ids in
-        *" arch "*) get_flatpak="sudo pacman -S flatpak" ;;
-        *" suse "*|*" opensuse "*) get_flatpak="sudo zypper install flatpak" ;;
-        *" debian "*|*" ubuntu "*) get_flatpak="sudo apt install flatpak" ;;
-        *" fedora "*|*" rhel "*) get_flatpak="sudo dnf install flatpak" ;;
-        *) get_flatpak="" ;;
-      esac
-      message="Flatpak is not installed. Install it first${get_flatpak:+ ($get_flatpak)}, see https://flathub.org/setup, then run this again."
-      [ "$dry_run" = true ] || fail "$message"
-      note "$message"
-    fi
-    say "1/2 Adding Flathub (for this user)"
-    run flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-    say "2/2 Installing"
-    run flatpak install --user -y flathub "$APP_ID"
+  other)
+    message="There is no package for this system yet. Build it from source: $SITE/install/ (a self-contained package is planned)."
+    [ "$dry_run" = true ] || fail "$message"
+    note "$message"
     ;;
 
-  *) fail "Unknown method $method (apt, dnf or flatpak)" ;;
+  *) fail "Unknown method $method (apt or dnf)" ;;
 esac
 
 say "Done"
@@ -182,6 +169,5 @@ else
   note "Open Tunnelbird from your applications."
   case $method in
     apt|dnf) note "Updates come with your system updates." ;;
-    flatpak) note "Updates come through Flathub (Software, or: flatpak update)." ;;
   esac
 fi

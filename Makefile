@@ -42,7 +42,7 @@ install: install-bin install-data
 install-bin:
 	install -Dm755 target/release/tunnelbird $(DESTDIR)$(PREFIX)/bin/tunnelbird
 
-# Everything but the binary: used alone by packagers that build Rust themselves (Snap).
+# Everything but the binary: used alone by packagers that build Rust themselves.
 install-data:
 	install -Dm644 data/$(APP_ID).desktop $(DESTDIR)$(PREFIX)/share/applications/$(APP_ID).desktop
 	install -Dm644 data/$(APP_ID).metainfo.xml $(DESTDIR)$(PREFIX)/share/metainfo/$(APP_ID).metainfo.xml

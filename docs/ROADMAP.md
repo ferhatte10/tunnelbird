@@ -18,7 +18,9 @@ From the simplest to the most technical, all presented on the website:
    `curl -fsSL https://tunnelbird.ferhatsn.fr/install.sh | sh`
    - Detects the distribution and picks the best method: APT repository
      (Ubuntu, Debian, Mint, Pop!_OS), DNF repository (Fedora, RHEL-like),
-     otherwise Flatpak from Flathub.
+     otherwise a self-contained package (GTK and libadwaita inside, installed
+     in the user's home, no password). On macOS the same command installs the
+     app.
    - Shows each step, asks for the password only when needed, and never runs
      anything it did not announce. Readable before running (link on the site).
    - Also checks the requirements: NetworkManager running, Linux 5.6+.
@@ -26,8 +28,8 @@ From the simplest to the most technical, all presented on the website:
    (`cargo-deb`, `cargo-generate-rpm` or `nfpm`), attached to each GitHub release.
 3. **Signed APT and DNF repositories** served by the website, so updates come
    with the system's own updates. One GPG key, published on the site.
-4. **Stores**: Flathub (`build-aux/flatpak`) and Snap Store (`snap/`), with
-   their buttons on the site.
+4. **No store**: neither Flathub nor the Snap Store. The script is the one way
+   in, as for other desktop apps installed by a command.
 
 ## 3. Website: `tunnelbird.ferhatsn.fr`
 
@@ -48,9 +50,8 @@ binary: it tells the user what will happen and sends them to the right place.
 
 | Installed with | Who installs the update | What Tunnelbird shows |
 |---|---|---|
-| Snap Store | snapd, automatically (several times a day) | “Tunnelbird updates itself”; once the new revision is in, “Restart to finish the update” |
-| Flathub (Flatpak) | GNOME Software / Discover, automatically or on click; `flatpak update` | Banner with “Update” through the Flatpak update portal (`CreateUpdateMonitor`), then “Restart to finish the update” |
 | `install.sh` → APT/DNF repository | The system updates (Software, Update Manager, `apt upgrade`, `dnf upgrade`) | “Arrives with your system updates”, button to open Software, and the command for terminal users |
+| `install.sh` → self-contained package (other distributions, macOS) | The script: run it again | Banner with the command to run again |
 | `.deb`/`.rpm` downloaded by hand | Nobody: no repository | Banner with a button to the website's download page (or to re-run `install.sh`, which adds the repository) |
 | Built from source / `make run` | The developer | Discreet line only, no banner |
 
@@ -59,12 +60,10 @@ binary: it tells the user what will happen and sends them to the right place.
 - **A newer version exists**: once a day at most, fetch
   `https://tunnelbird.ferhatsn.fr/latest.json` (version, date, notes, minimum
   supported version). No personal data sent; can be turned off in Preferences.
-  Flatpak installs use the update portal instead, which knows Flathub's state.
-- **How it was installed**: `/.flatpak-info` (Flatpak), `$SNAP` (Snap), the
-  package database (`dpkg -S`/`rpm -qf` on its own binary) for APT/DNF, else
+- **How it was installed**: the package database (`dpkg -S`/`rpm -qf` on its own binary) for APT/DNF, else
   “manual”.
 - **The update is installed but the old version still runs**: the binary on
-  disk changed after the app started (or a new snap revision exists) → “Restart
+  disk changed after the app started → “Restart
   to finish the update”, with a Restart button (same mechanism as the language
   switch). Background mode makes this matter: the app may run for weeks.
 - **After an update**: the version stored in the settings differs from the
@@ -77,16 +76,7 @@ binary: it tells the user what will happen and sends them to the right place.
 1. Bump `Cargo.toml` and add a `<release>` with notes to the metainfo.
 2. Tag `vX.Y.Z`: CI builds `.deb`/`.rpm`, publishes them to the APT/DNF
    repositories and the GitHub release, and updates `latest.json` on the site.
-3. Flathub: update the manifest tag (pull request on the app's Flathub repo,
-   or automatic with `x-checker-data`).
-4. Snap: snapcraft.io builds from the tag; promote from `edge` to `stable`.
-
-## 5. Store submissions
-
-- Flathub: switch the manifest source to the git tag, add screenshots to the
-  metainfo, open the request on `flathub/flathub`.
-- Snap Store: register `tunnelbird`, build on snapcraft.io from GitHub, request
-  auto-connection of `network-manager` and `network-observe` on the forum.
+3. CI also builds the self-contained package and the `.dmg` (`docs/plans/ci-and-release.md`).
 
 ## Later
 

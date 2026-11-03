@@ -4,7 +4,7 @@
 |---|---|---|
 | `deb.sh` | `.deb` for Ubuntu, Debian, Mint, Pop!_OS… | `make deb` |
 | `tunnelbird.spec` | `.rpm` for Fedora and RHEL-like systems | `make rpm` (needs `rpmbuild`) |
-| `../install.sh` | One-command installer served by the website: adds the signed APT or DNF repository, or uses the Flatpak | `sh build-aux/install.sh --dry-run` |
+| `../install.sh` | One-command installer served by the website: adds the signed APT or DNF repository | `sh build-aux/install.sh --dry-run` |
 
 Packages land in `target/packages/`. Both install exactly what `make install
 PREFIX=/usr` installs, and recommend the OpenVPN plugin and `iso-codes`.

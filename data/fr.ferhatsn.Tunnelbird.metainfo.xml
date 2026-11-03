@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright 2026 Ferhat Saidoun -->
-<!-- Store listing for Flathub, GNOME Software and KDE Discover (AppStream). -->
+<!-- AppStream listing: GNOME Software, KDE Discover and the website's changelog. -->
 <component type="desktop-application">
   <id>fr.ferhatsn.Tunnelbird</id>
   <metadata_license>CC0-1.0</metadata_license>
