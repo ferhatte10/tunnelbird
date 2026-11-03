@@ -30,7 +30,7 @@ provider or your own server, then connect in one click.
 - Preview and edit before importing; edit existing tunnels; export as a `.conf`
   or `.ovpn` file, or a WireGuard® tunnel as a QR code to scan with a phone
 - Top bar icon and menu: switch VPN, live traffic with a mini graph, location,
-  open the window or quit. Closing the window keeps Tunnelbird running there
+  open the window, open the preferences or quit. Closing the window keeps Tunnelbird running there
 - Automatic connection on untrusted networks (café or hotel Wi-Fi), never on
   your trusted Wi-Fi networks, picked from the ones your computer knows; an
   optional strict check also verifies the router hardware against look-alike

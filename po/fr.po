@@ -774,3 +774,6 @@ msgstr "Aucun problème"
 
 msgid "Nothing went wrong on this tunnel."
 msgstr "Aucun problème sur ce tunnel."
+
+msgid "Preferences…"
+msgstr "Préférences…"
