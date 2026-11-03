@@ -165,6 +165,10 @@ impl Ui {
         header.pack_start(&import_button);
         let menu = gio::Menu::new();
         menu.append(Some(&gettext("_Preferences")), Some("app.preferences"));
+        menu.append(
+            Some(&gettext("Check for _Updates")),
+            Some("app.check-updates"),
+        );
         menu.append(Some(&gettext("_About Tunnelbird")), Some("app.about"));
         let menu_button = gtk::MenuButton::builder()
             .icon_name("open-menu-symbolic")
@@ -344,6 +348,11 @@ impl Ui {
             });
         });
         self.app.add_action(&prefs);
+
+        let updates = gio::SimpleAction::new("check-updates", None);
+        let ui = self.clone();
+        updates.connect_activate(move |_, _| ui.fetch_update(true));
+        self.app.add_action(&updates);
 
         let import = gio::SimpleAction::new("import", None);
         let ui = self.clone();
@@ -989,12 +998,26 @@ impl Ui {
         if !settings.check_updates || !version::check_due(settings.last_update_check, unix_now()) {
             return;
         }
+        self.fetch_update(false);
+    }
+
+    /// Asks the website for the latest version. A manual check says what it
+    /// found, even when there is nothing new or the site is unreachable.
+    fn fetch_update(self: &Rc<Self>, manual: bool) {
         let ui = self.clone();
         glib::spawn_future_local(async move {
             let latest = match update::fetch_latest(&ui.http).await {
                 Ok(latest) => latest,
                 // Offline or the site is down: normal, tried again within the hour.
-                Err(err) => return glib::g_info!(LOG_DOMAIN, "Cannot check for updates: {err}"),
+                Err(err) => {
+                    glib::g_info!(LOG_DOMAIN, "Cannot check for updates: {err}");
+                    if manual {
+                        ui.toasts.add_toast(adw::Toast::new(&gettext(
+                            "Cannot check for updates right now",
+                        )));
+                    }
+                    return;
+                }
             };
             let newer = version::is_newer(&latest.version, VERSION);
             let mut settings = Settings::load();
@@ -1009,6 +1032,9 @@ impl Ui {
             }
             if newer {
                 ui.show_update(UpdateNotice::Available(Some(latest.version)));
+            } else if manual {
+                ui.toasts
+                    .add_toast(adw::Toast::new(&gettext("Tunnelbird is up to date")));
             }
         });
     }
@@ -1225,6 +1251,10 @@ impl Ui {
                 self.window.present();
                 self.app.activate_action("preferences", None);
             }
+            TrayAction::CheckUpdates => {
+                self.window.present();
+                self.app.activate_action("check-updates", None);
+            }
             TrayAction::Quit => self.app.quit(),
         }
     }
@@ -1281,6 +1311,7 @@ impl Ui {
             open_label: gettext("Open Tunnelbird"),
             disconnect_label: gettext("Disconnect"),
             preferences_label: gettext("Preferences…"),
+            check_updates_label: gettext("Check for Updates…"),
             quit_label: gettext("Quit"),
             ..TrayModel::default()
         });

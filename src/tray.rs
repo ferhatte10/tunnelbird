@@ -45,6 +45,7 @@ const ID_OPEN: i32 = 10;
 const ID_DISCONNECT: i32 = 11;
 const ID_QUIT: i32 = 12;
 const ID_PREFERENCES: i32 = 13;
+const ID_CHECK_UPDATES: i32 = 14;
 const ID_SEPARATORS: [i32; 3] = [20, 21, 22];
 const TUNNEL_BASE: i32 = 100;
 
@@ -56,6 +57,7 @@ pub enum TrayAction {
     Toggle(String),
     Disconnect,
     Preferences,
+    CheckUpdates,
     Quit,
 }
 
@@ -80,6 +82,7 @@ pub struct TrayModel {
     pub open_label: String,
     pub disconnect_label: String,
     pub preferences_label: String,
+    pub check_updates_label: String,
     pub quit_label: String,
     /// Menu revision; [`Tray::set`] overwrites it so hosts know the layout changed.
     pub revision: u32,
@@ -439,6 +442,7 @@ impl Menu {
             ID_OPEN | ID_UPDATE => TrayAction::ShowWindow,
             ID_DISCONNECT => TrayAction::Disconnect,
             ID_PREFERENCES => TrayAction::Preferences,
+            ID_CHECK_UPDATES => TrayAction::CheckUpdates,
             ID_QUIT => TrayAction::Quit,
             id if id >= TUNNEL_BASE => {
                 let model = lock(&self.model);
@@ -483,6 +487,7 @@ fn entries(model: &TrayModel) -> Vec<(i32, HashMap<String, OwnedVariant>)> {
         action(&model.disconnect_label, model.connected),
     ));
     list.push((ID_PREFERENCES, action(&model.preferences_label, true)));
+    list.push((ID_CHECK_UPDATES, action(&model.check_updates_label, true)));
     list.push((ID_SEPARATORS[2], separator()));
     list.push((ID_QUIT, action(&model.quit_label, true)));
     list
@@ -581,5 +586,16 @@ mod tests {
         let preferences = ids.iter().position(|id| *id == ID_PREFERENCES);
         let quit = ids.iter().position(|id| *id == ID_QUIT);
         assert!(preferences.is_some() && preferences < quit);
+    }
+
+    #[test]
+    fn check_for_updates_comes_before_quit() {
+        let ids: Vec<i32> = entries(&TrayModel::default())
+            .iter()
+            .map(|(id, _)| *id)
+            .collect();
+        let check = ids.iter().position(|id| *id == ID_CHECK_UPDATES);
+        let quit = ids.iter().position(|id| *id == ID_QUIT);
+        assert!(check.is_some() && check < quit);
     }
 }
