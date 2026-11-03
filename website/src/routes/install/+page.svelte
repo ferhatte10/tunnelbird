@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { AVAILABLE, RELEASES } from '#lib/links.js';
+	import { AVAILABLE, REPOSITORY, RELEASES } from '#lib/links.js';
 	import CommandBox from '#lib/components/CommandBox.svelte';
 	import InstallTabs from '#lib/components/InstallTabs.svelte';
 	import PageTitle from '#lib/components/PageTitle.svelte';
@@ -13,6 +13,13 @@ sudo apt update && sudo apt install tunnelbird`;
 	const dnf = `printf '[tunnelbird]\\nname=Tunnelbird\\nbaseurl=https://tunnelbird.ferhatsn.fr/rpm/$basearch\\nenabled=1\\ngpgcheck=1\\nrepo_gpgcheck=1\\ngpgkey=https://tunnelbird.ferhatsn.fr/tunnelbird.gpg\\n' | sudo tee /etc/yum.repos.d/tunnelbird.repo
 sudo dnf install tunnelbird`;
 
+	const manual = `curl -fsSLO https://github.com/ferhatte10/tunnelbird/releases/latest/download/SHA256SUMS
+name=$(sed -n 's/^[0-9a-f]\\{64\\}  \\(tunnelbird-[0-9][^ ]*-linux-'$(uname -m)'\\.tar\\.gz\\)$/\\1/p' SHA256SUMS)
+curl -fsSLO https://github.com/ferhatte10/tunnelbird/releases/latest/download/$name
+grep " $name$" SHA256SUMS | sha256sum -c -
+tar -xzf $name -C ~/.local/share
+~/.local/share/tunnelbird/AppRun`;
+
 	const macosUninstall = `sudo "/Library/Application Support/Tunnelbird/tunnelbird-service" --uninstall-daemon
 sudo rm -rf "/Library/Application Support/Tunnelbird"
 rm -rf /Applications/Tunnelbird.app`;
@@ -21,8 +28,12 @@ rm -rf /Applications/Tunnelbird.app`;
 	const sourceDnf = 'sudo dnf install gtk4-devel libadwaita-devel libsoup3-devel gettext desktop-file-utils';
 
 	const uninstall = [
-		{ label: m.tab_apt, command: 'sudo apt remove tunnelbird' },
-		{ label: m.tab_dnf, command: 'sudo dnf remove tunnelbird' },
+		...(REPOSITORY
+			? [
+					{ label: m.tab_apt, command: 'sudo apt remove tunnelbird' },
+					{ label: m.tab_dnf, command: 'sudo dnf remove tunnelbird' }
+				]
+			: []),
 		{ label: m.uninstall_script, command: 'curl -fsSL https://tunnelbird.ferhatsn.fr/install.sh | sh -s -- --uninstall' },
 		{ label: m.tab_macos, command: macosUninstall },
 		{ label: m.tab_source, command: 'sudo make uninstall' }
@@ -41,8 +52,12 @@ rm -rf /Applications/Tunnelbird.app`;
 	<h2 id="steps" class="mt-16 mb-2 text-[1.75rem] font-extrabold">{m.steps_title()}</h2>
 	<p class="m-0 mb-6 text-text-2">{m.steps_lead()}</p>
 	<div class="flex flex-col gap-6">
-		<CommandBox command={apt} label={m.steps_apt()} />
-		<CommandBox command={dnf} label={m.steps_dnf()} />
+		{#if REPOSITORY}
+			<CommandBox command={apt} label={m.steps_apt()} />
+			<CommandBox command={dnf} label={m.steps_dnf()} />
+		{:else}
+			<CommandBox command={manual} label={m.steps_package()} />
+		{/if}
 		<CommandBox command={sourceApt} label="{m.steps_source_deps()} · {m.tab_apt()}" />
 		<CommandBox command={sourceDnf} label="{m.steps_source_deps()} · {m.tab_dnf()}" />
 	</div>
@@ -54,7 +69,7 @@ rm -rf /Applications/Tunnelbird.app`;
 
 	{#if AVAILABLE}
 	<h2 class="mt-16 mb-2 text-[1.75rem] font-extrabold">{m.download_title()}</h2>
-	<p class="m-0 text-text-2">{m.download_text()} <a href={RELEASES}>{m.download_link()}</a>.</p>
+	<p class="m-0 text-text-2">{REPOSITORY ? m.download_text() : m.download_text_package()} <a href={RELEASES}>{m.download_link()}</a>.</p>
 
 	<h2 class="mt-16 mb-2 text-[1.75rem] font-extrabold">{m.uninstall_title()}</h2>
 	<p class="m-0 mb-6 text-text-2">{m.uninstall_text()}</p>

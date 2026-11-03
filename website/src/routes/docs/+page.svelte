@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
-	import { AVAILABLE, ISSUES } from '#lib/links.js';
+	import { AVAILABLE, ISSUES, REPOSITORY } from '#lib/links.js';
 	import PageTitle from '#lib/components/PageTitle.svelte';
 
 	const sections = [
@@ -8,7 +8,7 @@
 		{ id: 'trusted-networks', title: m.docs_trust_title, text: m.docs_trust_text },
 		{ id: 'sharing', title: m.docs_share_title, text: m.docs_share_text },
 		{ id: 'top-bar', title: m.docs_tray_title, text: m.docs_tray_text },
-		{ id: 'updates', title: m.docs_updates_title, text: m.docs_updates_text }
+		{ id: 'updates', title: m.docs_updates_title, text: REPOSITORY ? m.docs_updates_text : m.docs_updates_text_package }
 	];
 </script>
 
