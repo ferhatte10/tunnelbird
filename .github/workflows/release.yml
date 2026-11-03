@@ -3,7 +3,7 @@ name: Release
 # A tag vX.Y.Z publishes a release with no manual step: .deb and .rpm for amd64 and arm64, a
 # self-contained package for each, SHA256SUMS, latest.json for the website, and a build provenance for each file
 # (signed through GitHub's OIDC, no stored key: `gh attestation verify <file> -R ferhatte10/tunnelbird`).
-# No secret here: the APT/DNF repositories are signed in the cluster (docs/plans/website.md).
+# No secret here: the APT/DNF repositories are signed on the server that serves them (docs/plans/website.md).
 
 on:
   push:

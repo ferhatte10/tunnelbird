@@ -33,8 +33,7 @@ From the simplest to the most technical, all presented on the website:
 
 ## 3. Website: `tunnelbird.ferhatsn.fr`
 
-- Hosted on the homelab Kubernetes cluster, like the portfolio
-  (Argo CD, Traefik, TLS).
+- Static pages, served over HTTPS by the maintainer's own server.
 - Pages: presentation with screenshots, “Install” (steps per distribution and
   the one-line command), documentation, privacy, changelog.
 - Serves `install.sh`, the APT/DNF repositories and the signing key.

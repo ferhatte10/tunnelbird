@@ -2,7 +2,7 @@
 
 Status: OpenVPN **done** (2026-10-29, `src/ovpn.rs`, see
 `docs/ARCHITECTURE.md`; still to test on a real server); the rest is thinking
-ahead. Order decided by the owner: OpenVPN, then the shared core, then Windows,
+ahead. Order decided by the maintainer: OpenVPN, then the shared core, then Windows,
 then macOS. Translations through Weblate once the repository is public.
 
 ## 1. OpenVPN profiles (done)
@@ -119,7 +119,7 @@ with first-run steps: `docs/WINDOWS.md`, `docs/MACOS.md`.
   things and sends clicks: all the logic is in the Rust core and the service,
   over the named pipe (a small documented JSON protocol, the same as on
   macOS). Built with the free .NET SDK.
-- **Distribution**: owner's decision, **no store**: an installer downloaded
+- **Distribution**: maintainer's decision, **no store**: an installer downloaded
   from the website (an `.msi` installing the app and the service), plus `winget`
   later if wanted. The drivers are already signed by their authors, so only
   Tunnelbird's own files would be unsigned: Windows SmartScreen then shows
@@ -139,7 +139,7 @@ recovery, install from the `.dmg`, “Open Anyway”. Not released. What is left
 CI building the `.dmg`, the website's macOS tab, Intel, and the cases
 `docs/COMPATIBILITY.md` marks as not run (`docs/MACOS.md`, “Still to do”).
 
-- **Distribution**: owner's decision, **no store and no paid Apple account**:
+- **Distribution**: maintainer's decision, **no store and no paid Apple account**:
   a `.dmg` downloaded from the website.
 - **Consequence for the tunnels**: Apple's VPN framework (NetworkExtension)
   needs an entitlement that only a paid developer account can grant, even
@@ -160,7 +160,7 @@ CI building the `.dmg`, the website's macOS tab, Intel, and the cases
 - OpenVPN runs through the `openvpn` program started by the helper; WireGuard
   first.
 
-### How the owner works on these systems
+### How the maintainer works on these systems
 
 macOS is developed directly on a Mac, with the free command line tools. Windows
 stays to do on a Windows PC. Never a self-hosted CI runner on these machines
@@ -172,7 +172,7 @@ Effort: weeks for each system; no yearly cost with the choices above.
 
 **Decided**: no store and no paid account (the project spends nothing),
 installers from the website only; native interfaces (WinUI 3, SwiftUI) on top
-of the shared Rust core; the owner has a Windows PC and a Mac to test once the
+of the shared Rust core; the maintainer has a Windows PC and a Mac to test once the
 app works. Tauri + Svelte stays the fallback if the remote round trips become
 a burden. The shared core exists (`crates/core`). **Still open**: apply to the SignPath
 Foundation once public.
