@@ -4,6 +4,8 @@ The project's website: presentation, installation, documentation, privacy,
 compatibility, changelog. English at `/`, French at `/fr/`. Design rules:
 [DESIGN.md](DESIGN.md); plan and deployment: `../docs/plans/website.md`.
 
+All rights reserved, unlike the application (GPL-3.0): see [LICENSE](LICENSE).
+
 A static site (SvelteKit with `adapter-static`): every page is a plain file,
 nothing runs on the server, no cookie, no analytics, no third-party request.
 
