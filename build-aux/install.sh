@@ -10,13 +10,16 @@
 #     updates arrive with the system updates;
 #   - Fedora, RHEL-like…: Tunnelbird's signed DNF repository, same;
 #   - anything else, or while the repository is not published: a self-contained
-#     package (GTK and libadwaita inside) in your home folder, no administrator.
+#     package (GTK and libadwaita inside) in your home folder, no administrator;
+#   - macOS (Apple silicon): the app from the release's disk image, in
+#     ~/Applications, no administrator. The app asks for the administrator's
+#     password itself, once, to install its helper.
 # Administrator rights (sudo) are asked only for the steps that need them.
 #
 # Options:
 #   --dry-run          print the steps, change nothing
 #   --method NAME      force apt, dnf or bundle (the self-contained package)
-#   --uninstall        remove what the bundle method installed
+#   --uninstall        remove what the bundle method (or the macOS app) installed
 #   --help
 #
 # Source: https://github.com/ferhatte10/tunnelbird/blob/main/build-aux/install.sh
@@ -36,6 +39,10 @@ GLIBC_MIN=2.39
 DATA=${XDG_DATA_HOME:-$HOME/.local/share}
 BIN=$HOME/.local/bin
 DEST=$DATA/tunnelbird
+
+APPS=$HOME/Applications
+APP_NAME=Tunnelbird.app
+MAC_SERVICE="/Library/Application Support/Tunnelbird/tunnelbird-service"
 
 dry_run=false
 uninstall=false
@@ -113,7 +120,76 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-[ "$(uname -s)" = Linux ] || fail "Tunnelbird for $(uname -s) is not available yet: see $SITE"
+case $(uname -s) in
+  Linux|Darwin) ;;
+  *) fail "Tunnelbird for $(uname -s) is not available yet: see $SITE" ;;
+esac
+
+# --- macOS ---------------------------------------------------------------------
+
+if [ "$(uname -s)" = Darwin ]; then
+  if [ "$uninstall" = true ]; then
+    say "Removing Tunnelbird"
+    [ "$dry_run" = true ] && note "Dry run: nothing will be changed."
+    if [ -e "$MAC_SERVICE" ]; then
+      note "The helper runs as an administrator: removing it asks for your password."
+      root "$MAC_SERVICE" --uninstall-daemon
+      root rm -rf "/Library/Application Support/Tunnelbird"
+    fi
+    run rm -rf "$APPS/$APP_NAME" "/Applications/$APP_NAME"
+    note "Your tunnels were stored with the helper: they are removed with it."
+    exit 0
+  fi
+
+  arch=$(uname -m)
+  [ "$arch" = arm64 ] || fail "The macOS app is built for Apple silicon (arm64); this Mac is $arch."
+  major=$(sw_vers -productVersion 2> /dev/null | cut -d. -f1)
+  [ "${major:-13}" -ge 13 ] 2> /dev/null || fail "Tunnelbird needs macOS 13 or later."
+  for tool in curl hdiutil shasum; do
+    command -v "$tool" > /dev/null 2>&1 || need "$tool is required and was not found."
+  done
+
+  say "Installing Tunnelbird"
+  note "System: macOS $(sw_vers -productVersion 2> /dev/null) ($arch)"
+  [ "$dry_run" = true ] && note "Dry run: nothing will be changed."
+  tmp=$(mktemp -d)
+  trap 'hdiutil detach -quiet "$tmp/disk" 2> /dev/null || true; rm -rf "$tmp"' EXIT
+
+  say "1/4 Finding the latest release"
+  run curl -fsSL "$DOWNLOAD/SHA256SUMS" -o "$tmp/SHA256SUMS"
+  if [ "$dry_run" = true ]; then
+    name="Tunnelbird-VERSION-$arch.dmg"
+  else
+    name=$(sed -n "s/^[0-9a-f]\{64\}  \(Tunnelbird-[0-9][^ ]*-$arch\.dmg\)\$/\1/p" "$tmp/SHA256SUMS" | head -n1)
+    [ -n "$name" ] || fail "No macOS app in the latest release: see $SITE/install/"
+  fi
+  note "Disk image: $name"
+  say "2/4 Downloading"
+  run curl -fSL -o "$tmp/$name" "$DOWNLOAD/$name"
+  say "3/4 Checking the download"
+  note "It must match the checksum the release published."
+  if [ "$dry_run" = true ]; then
+    printf '  $ (cd %s && grep %s SHA256SUMS | shasum -a 256 -c -)\n' "$tmp" "$name"
+  else
+    (cd "$tmp" && grep " $name\$" SHA256SUMS | shasum -a 256 -c -) || fail "The download does not match its checksum."
+  fi
+  say "4/4 Installing in $APPS"
+  note "Your home folder only: no administrator. Downloaded here, not in a browser, the app is not blocked by Gatekeeper."
+  run mkdir -p "$APPS"
+  run hdiutil attach -quiet -nobrowse -readonly -mountpoint "$tmp/disk" "$tmp/$name"
+  run rm -rf "$APPS/$APP_NAME"
+  run cp -R "$tmp/disk/$APP_NAME" "$APPS/"
+  run hdiutil detach -quiet "$tmp/disk"
+  say "Done"
+  if [ "$dry_run" = true ]; then
+    note "Nothing was changed (dry run)."
+  else
+    note "Open Tunnelbird from $APPS (or Launchpad). The first time, it offers to install its helper:"
+    note "that asks for your administrator's password, once."
+    note "To update, run the same command again."
+  fi
+  exit 0
+fi
 
 # --- Uninstall ---------------------------------------------------------------
 

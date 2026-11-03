@@ -22,7 +22,7 @@ tar -xzf $name -C ~/.local/share
 
 	const macosUninstall = `sudo "/Library/Application Support/Tunnelbird/tunnelbird-service" --uninstall-daemon
 sudo rm -rf "/Library/Application Support/Tunnelbird"
-rm -rf /Applications/Tunnelbird.app`;
+rm -rf ~/Applications/Tunnelbird.app /Applications/Tunnelbird.app`;
 
 	const sourceApt = 'sudo apt install libgtk-4-dev libadwaita-1-dev libsoup-3.0-dev gettext desktop-file-utils';
 	const sourceDnf = 'sudo dnf install gtk4-devel libadwaita-devel libsoup3-devel gettext desktop-file-utils';

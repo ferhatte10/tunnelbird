@@ -1,7 +1,7 @@
 name: Release
 
 # A tag vX.Y.Z publishes a release with no manual step: .deb and .rpm for amd64 and arm64, a
-# self-contained package for each, SHA256SUMS, latest.json for the website, and a build provenance for each file
+# self-contained package for each, the macOS disk image, SHA256SUMS, latest.json for the website, and a build provenance for each file
 # (signed through GitHub's OIDC, no stored key: `gh attestation verify <file> -R ferhatte10/tunnelbird`).
 # No secret here: the APT/DNF repositories are signed on the server that serves them (docs/plans/website.md).
 
@@ -140,8 +140,39 @@ jobs:
           path: target/bundle/tunnelbird-*-linux-*.tar.gz
           if-no-files-found: error
 
+  # The macOS app: Apple silicon only (a Mac runner), unsigned by Apple (docs/MACOS.md), and installed by
+  # the website's install.sh from this file.
+  macos:
+    needs: version
+    runs-on: macos-15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Rust (stable)
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: OpenVPN, to put in the app
+        run: brew install openvpn
+
+      - name: Build the disk image
+        run: apple/make-dmg.sh
+
+      - name: Check it
+        run: apple/smoke.sh apple/build/Tunnelbird-*-arm64.dmg
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: macos-dmg
+          path: apple/build/Tunnelbird-*-arm64.dmg
+          if-no-files-found: error
+
   publish:
-    needs: [version, deb, rpm, bundle]
+    needs: [version, deb, rpm, bundle, macos]
     runs-on: ubuntu-24.04
     permissions:
       contents: write

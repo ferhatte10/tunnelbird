@@ -116,17 +116,33 @@ Notes from the first real runs (what was seen, and what is only reasoned):
 
 ## Build and install
 
+Users install it with the website's command, which downloads the `.dmg` of the
+latest release, checks its checksum and copies the app to `~/Applications`
+(`build-aux/install.sh`; a file fetched by `curl` is not quarantined, so there is
+no “Open Anyway” step):
+
+```sh
+curl -fsSL https://tunnelbird.ferhatsn.fr/install.sh | sh
+```
+
+The release workflow builds the `.dmg` on a GitHub Mac (`macos` job, Apple
+silicon) and `apple/smoke.sh` checks it: signed, no library read from Homebrew's
+folders. `.github/workflows/macos.yml` does the same on pull requests and
+installs the image with `install.sh` from a local folder. To build it by hand:
+
 ```sh
 apple/make-dmg.sh    # apple/build/Tunnelbird-VERSION-ARCH.dmg, needs Homebrew's openvpn
 ```
 
-Open it, drop the app on Applications, start it: it offers to install the
-service (administrator's password). To remove everything:
+A `.dmg` downloaded in a browser is quarantined: drop the app on Applications,
+and macOS blocks the first start (System Settings › Privacy & Security › “Open
+Anyway”). Start it: the app offers to install the service (administrator's
+password). To remove everything (`install.sh --uninstall` does the same):
 
 ```sh
 sudo "/Library/Application Support/Tunnelbird/tunnelbird-service" --uninstall-daemon
 sudo rm -rf "/Library/Application Support/Tunnelbird"    # also the stored tunnels and keys
-rm -rf /Applications/Tunnelbird.app
+rm -rf ~/Applications/Tunnelbird.app /Applications/Tunnelbird.app
 ```
 
 The app's version in `apple/Resources/Info.plist` must equal the service's in
@@ -135,13 +151,12 @@ update the service, which an update of the app does not reach.
 
 ## Still to do
 
-1. Release: for now the `.dmg` is built on the Mac. CI building it
-   (`docs/plans/ci-and-release.md`, “The macOS `.dmg`”) and a published
-   `latest.json` with the macOS download, so the update notice works.
-2. The website's macOS tab with the “Open Anyway” screenshots, once a `.dmg` is
-   published, then `AVAILABLE` in `website/src/lib/links.ts`. macOS first shows
-   “Move to Trash” as its main button, next to “Done”: the page must say to
-   choose “Done”, then Privacy & Security.
+1. The first release carrying the `.dmg` (CI and `install.sh` are written, never
+   run on a real tag): install it on a Mac with the command above, from a clean
+   state.
+2. A page of the website for a `.dmg` downloaded in a browser, with the “Open
+   Anyway” screenshots. macOS first shows “Move to Trash” as its main button,
+   next to “Done”: the page must say to choose “Done”, then Privacy & Security.
 3. Intel: needs `rustup`, Intel builds of OpenVPN's libraries, and a Mac to test.
 4. What `docs/COMPATIBILITY.md` marks as not run: macOS 13 to 26, a switch to
    Ethernet, the IPv6 block with a WireGuard® file carrying only IPv4, the

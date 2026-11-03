@@ -113,14 +113,15 @@ Budget per release: about 25 minutes over all jobs (free once public).
   containers (pinned by digest): each must choose apt, apt, dnf, and “other” (no package yet).
 - `website.yml`: see `website.md`, “Deployment”.
 
-### 6. The macOS `.dmg` (not written yet)
+### 6. The macOS `.dmg`
 
-Today `apple/make-dmg.sh` runs on the maintainer's Mac. To build it in CI: a
-`macos-15` job (Apple silicon) on the tag, with `brew install openvpn`, running
-`apple/make-dmg.sh`; the `.dmg` goes to the release with its checksum and
-attestation, and `latest.json` gets the macOS download so the app's update
-notice works. The app is not signed with a paid account (`docs/MACOS.md`):
-users go through “Open Anyway”. Intel is a second job, once an Intel Mac can
+The `macos` job of `release.yml` (`macos-15`, Apple silicon) runs `brew install openvpn`
+and `apple/make-dmg.sh`, checks the image with `apple/smoke.sh` and hands it to
+`publish`, which adds it to `SHA256SUMS`, the attestation and the release. The
+`install.sh` of the site downloads it on a Mac (`~/Applications`, no
+quarantine). `macos.yml` builds, checks and installs it on pull requests that
+touch `apple/`, the service, the core or `install.sh`. The app is not signed with
+a paid account (`docs/MACOS.md`). Intel is a second job, once an Intel Mac can
 test it.
 
 ## Branch protection (when public)
