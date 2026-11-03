@@ -158,6 +158,14 @@ jobs:
           path: dist
           merge-multiple: true
 
+      # The .rpm artifacts keep their architecture folder (x86_64/, aarch64/): every file goes
+      # to the top, side by side, for the checksums, the attestation and the release.
+      - name: Flatten the downloads
+        run: |
+          find dist -mindepth 2 -type f -exec mv -t dist {} +
+          find dist -mindepth 1 -type d -empty -delete
+          ls -l dist
+
       # The notes and the date come from the store listing's newest <release>.
       - name: Release notes and latest.json
         run: |
