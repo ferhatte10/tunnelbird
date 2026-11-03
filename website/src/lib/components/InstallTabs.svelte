@@ -2,11 +2,11 @@
 	import { Tabs } from 'bits-ui';
 	import { m } from '#lib/paraglide/messages.js';
 	import { localizeHref } from '#lib/paraglide/runtime.js';
-	import { AVAILABLE, COMMANDS, GITHUB, INSTALL_SCRIPT_SOURCE, type Method } from '#lib/links.js';
+	import { AVAILABLE, COMMANDS, GITHUB, INSTALL_SCRIPT_SOURCE, REPOSITORY, type Method } from '#lib/links.js';
 	import CommandBox from './CommandBox.svelte';
 
 	const methods: { id: Method; label: () => string; text: () => string }[] = [
-		{ id: 'linux', label: m.tab_linux, text: m.tab_linux_text },
+		{ id: 'linux', label: m.tab_linux, text: REPOSITORY ? m.tab_linux_text : m.tab_linux_text_package },
 		{ id: 'macos', label: m.tab_macos, text: m.tab_macos_text },
 		{ id: 'windows', label: m.tab_windows, text: m.tab_windows_text },
 		{ id: 'source', label: m.tab_source, text: m.tab_source_text }
