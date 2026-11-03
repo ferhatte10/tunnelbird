@@ -13,8 +13,9 @@ sudo apt update && sudo apt install tunnelbird`;
 	const dnf = `printf '[tunnelbird]\\nname=Tunnelbird\\nbaseurl=https://tunnelbird.ferhatsn.fr/rpm/$basearch\\nenabled=1\\ngpgcheck=1\\nrepo_gpgcheck=1\\ngpgkey=https://tunnelbird.ferhatsn.fr/tunnelbird.gpg\\n' | sudo tee /etc/yum.repos.d/tunnelbird.repo
 sudo dnf install tunnelbird`;
 
-	const snap = `sudo snap connect tunnelbird:network-manager
-sudo snap connect tunnelbird:network-observe`;
+	const macosUninstall = `sudo "/Library/Application Support/Tunnelbird/tunnelbird-service" --uninstall-daemon
+sudo rm -rf "/Library/Application Support/Tunnelbird"
+rm -rf /Applications/Tunnelbird.app`;
 
 	const sourceApt = 'sudo apt install libgtk-4-dev libadwaita-1-dev libsoup-3.0-dev gettext desktop-file-utils';
 	const sourceDnf = 'sudo dnf install gtk4-devel libadwaita-devel libsoup3-devel gettext desktop-file-utils';
@@ -22,8 +23,8 @@ sudo snap connect tunnelbird:network-observe`;
 	const uninstall = [
 		{ label: m.tab_apt, command: 'sudo apt remove tunnelbird' },
 		{ label: m.tab_dnf, command: 'sudo dnf remove tunnelbird' },
-		{ label: m.tab_flatpak, command: 'flatpak uninstall fr.ferhatsn.Tunnelbird' },
-		{ label: m.tab_snap, command: 'sudo snap remove tunnelbird' },
+		{ label: m.uninstall_script, command: 'rm -rf ~/.local/share/tunnelbird ~/.local/bin/tunnelbird' },
+		{ label: m.tab_macos, command: macosUninstall },
 		{ label: m.tab_source, command: 'sudo make uninstall' }
 	];
 </script>
@@ -42,7 +43,6 @@ sudo snap connect tunnelbird:network-observe`;
 	<div class="flex flex-col gap-6">
 		<CommandBox command={apt} label={m.steps_apt()} />
 		<CommandBox command={dnf} label={m.steps_dnf()} />
-		<CommandBox command={snap} label={m.steps_snap_connect()} />
 		<CommandBox command={sourceApt} label="{m.steps_source_deps()} · {m.tab_apt()}" />
 		<CommandBox command={sourceDnf} label="{m.steps_source_deps()} · {m.tab_dnf()}" />
 	</div>

@@ -24,10 +24,10 @@
 		{ name: 'Ubuntu 24.04 LTS', state: 'expected' },
 		{ name: 'Linux Mint 22, Pop!_OS 24.04, elementary OS 8, Zorin OS', state: 'expected' },
 		{ name: 'Debian 13', state: 'expected' },
-		{ name: 'Debian 12 (Flatpak)', state: 'expected' },
+		{ name: 'Debian 12 (GTK too old)', state: 'no' },
 		{ name: 'Fedora 41+', state: 'expected' },
-		{ name: 'openSUSE Tumbleweed, Arch, Manjaro (Flatpak or source)', state: 'expected' },
-		{ name: 'RHEL, AlmaLinux, Rocky Linux 10 (Flatpak)', state: 'expected' },
+		{ name: 'openSUSE Tumbleweed, Arch, Manjaro (self-contained package)', state: 'planned' },
+		{ name: 'RHEL, AlmaLinux, Rocky Linux 10 (self-contained package)', state: 'planned' },
 		{ name: 'WSL, ChromeOS, systems without NetworkManager', state: 'no' }
 	];
 
