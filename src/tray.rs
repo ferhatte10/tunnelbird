@@ -44,6 +44,7 @@ const ID_UPDATE: i32 = 5;
 const ID_OPEN: i32 = 10;
 const ID_DISCONNECT: i32 = 11;
 const ID_QUIT: i32 = 12;
+const ID_PREFERENCES: i32 = 13;
 const ID_SEPARATORS: [i32; 3] = [20, 21, 22];
 const TUNNEL_BASE: i32 = 100;
 
@@ -54,6 +55,7 @@ pub enum TrayAction {
     /// Connect this tunnel (others are disconnected), or disconnect it if it is the active one.
     Toggle(String),
     Disconnect,
+    Preferences,
     Quit,
 }
 
@@ -77,6 +79,7 @@ pub struct TrayModel {
     pub update: Option<String>,
     pub open_label: String,
     pub disconnect_label: String,
+    pub preferences_label: String,
     pub quit_label: String,
     /// Menu revision; [`Tray::set`] overwrites it so hosts know the layout changed.
     pub revision: u32,
@@ -435,6 +438,7 @@ impl Menu {
         let action = match id {
             ID_OPEN | ID_UPDATE => TrayAction::ShowWindow,
             ID_DISCONNECT => TrayAction::Disconnect,
+            ID_PREFERENCES => TrayAction::Preferences,
             ID_QUIT => TrayAction::Quit,
             id if id >= TUNNEL_BASE => {
                 let model = lock(&self.model);
@@ -478,6 +482,7 @@ fn entries(model: &TrayModel) -> Vec<(i32, HashMap<String, OwnedVariant>)> {
         ID_DISCONNECT,
         action(&model.disconnect_label, model.connected),
     ));
+    list.push((ID_PREFERENCES, action(&model.preferences_label, true)));
     list.push((ID_SEPARATORS[2], separator()));
     list.push((ID_QUIT, action(&model.quit_label, true)));
     list
@@ -560,4 +565,21 @@ fn to_argb(pixbuf: &Pixbuf) -> Pixmap {
         }
     }
     (width, height, argb)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn preferences_come_before_quit() {
+        let model = TrayModel {
+            preferences_label: "Preferences…".to_owned(),
+            ..TrayModel::default()
+        };
+        let ids: Vec<i32> = entries(&model).iter().map(|(id, _)| *id).collect();
+        let preferences = ids.iter().position(|id| *id == ID_PREFERENCES);
+        let quit = ids.iter().position(|id| *id == ID_QUIT);
+        assert!(preferences.is_some() && preferences < quit);
+    }
 }
