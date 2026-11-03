@@ -1,7 +1,7 @@
 name: Release
 
-# A tag vX.Y.Z publishes a release with no manual step: .deb and .rpm for amd64 and arm64,
-# SHA256SUMS, latest.json for the website, and a build provenance for each file
+# A tag vX.Y.Z publishes a release with no manual step: .deb and .rpm for amd64 and arm64, a
+# self-contained package for each, SHA256SUMS, latest.json for the website, and a build provenance for each file
 # (signed through GitHub's OIDC, no stored key: `gh attestation verify <file> -R ferhatte10/tunnelbird`).
 # No secret here: the APT/DNF repositories are signed in the cluster (docs/plans/website.md).
 
@@ -101,8 +101,45 @@ jobs:
           path: target/packages/*/*.rpm
           if-no-files-found: error
 
+  # GTK and libadwaita inside, for the distributions without a repository (build-aux/bundle/README.md).
+  # Built here, on Ubuntu 24.04: a package built on a newer system does not start on older ones.
+  bundle:
+    needs: version
+    strategy:
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install the build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-4-dev libadwaita-1-dev libsoup-3.0-dev gettext libglib2.0-bin adwaita-icon-theme librsvg2-common patchelf xvfb xauth fonts-dejavu-core
+
+      - name: Rust (stable)
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: Build the package
+        run: build-aux/bundle/build.sh
+
+      - name: Start it
+        run: build-aux/bundle/smoke.sh target/bundle/tunnelbird-*-linux-*.tar.gz
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bundle-${{ runner.arch }}
+          path: target/bundle/tunnelbird-*-linux-*.tar.gz
+          if-no-files-found: error
+
   publish:
-    needs: [version, deb, rpm]
+    needs: [version, deb, rpm, bundle]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
