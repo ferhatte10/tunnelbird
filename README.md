@@ -173,6 +173,10 @@ padlock and a swallow leaving the tunnel. Icons live in `data/icons/hicolor`.
 Tunnelbird is free software, released under the
 [GNU General Public License v3.0 or later](LICENSE).
 
+The one exception is the website, in [website/](website/): its texts, design,
+code and film are all rights reserved, see [website/LICENSE](website/LICENSE).
+The files it copies from the application stay under the GPL.
+
 ## Contributing
 
 Contributions and translations are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md)
