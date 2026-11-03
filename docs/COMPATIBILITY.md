@@ -45,13 +45,13 @@ NetworkManager must manage the network.
 | Distribution | Native package | Self-contained package | Notes |
 |---|---|---|---|
 | Ubuntu 26.04 LTS | **Tested** (source build, `make install`) | Planned | Reference machine, see below |
-| Ubuntu 24.04 LTS | Expected (oldest target: GTK 4.14, libadwaita 1.5) | Planned | The CI builds on it (`docs/plans/ci-and-release.md`) |
+| Ubuntu 24.04 LTS | Expected (oldest target: GTK 4.14, libadwaita 1.5) | Expected (installed by the script in a container) | The CI builds on it (`docs/plans/ci-and-release.md`) |
 | Linux Mint 22, Pop!_OS 24.04, elementary OS 8, Zorin OS (24.04 base) | Expected (Ubuntu 24.04 packages) | Planned | |
-| Debian 13 “trixie” | Expected | Planned | |
+| Debian 13 “trixie” | Expected | Expected (installed by the script in a container) | |
 | Debian 12 “bookworm” | No (GTK 4.8) | No (glibc 2.36) | Not supported |
-| Fedora 41 and later | Expected | Planned | SELinux: OpenVPN certificates go to `~/.cert/nm-openvpn`, where it allows them |
+| Fedora 41 and later | Expected | Expected (installed by the script in a container, Fedora 42) | SELinux: OpenVPN certificates go to `~/.cert/nm-openvpn`, where it allows them |
 | openSUSE Tumbleweed | From source | Planned | |
-| Arch, Manjaro, EndeavourOS | From source (AUR later) | Planned | OpenVPN plugin not installed by default |
+| Arch, Manjaro, EndeavourOS | From source (AUR later) | Expected (installed by the script in an Arch container) | OpenVPN plugin not installed by default |
 | RHEL / AlmaLinux / Rocky 10 | Not packaged | Planned | |
 | Systems without NetworkManager (servers using systemd-networkd or netplan only, Alpine…) | No | No | Tunnelbird hands tunnels to NetworkManager |
 | WSL, ChromeOS Linux container | No | No | No NetworkManager-managed network |

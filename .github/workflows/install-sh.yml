@@ -36,7 +36,7 @@ jobs:
             method: dnf
           - name: Arch Linux
             image: archlinux:latest@sha256:e82623936fa1a69700b48e98b058df6eaab18b737c27473a7234a40fdecb9413
-            method: other
+            method: bundle
     name: ${{ matrix.name }}
     steps:
       - name: Checkout code
@@ -44,10 +44,25 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Dry run
+      - name: Dry run, the best method
         env:
           IMAGE: ${{ matrix.image }}
           METHOD: ${{ matrix.method }}
         run: |
-          docker run --rm -v "$PWD/build-aux/install.sh:/install.sh:ro" "$IMAGE" sh /install.sh --dry-run | tee out.txt
-          grep -qi "$METHOD" out.txt || { echo "::error::expected the $METHOD method"; exit 1; }
+          case "$METHOD" in
+            apt) expect='apt-get install' ;;
+            dnf) expect='dnf install' ;;
+            *) expect='sha256sum -c' ;;
+          esac
+          docker run --rm -v "$PWD/build-aux/install.sh:/install.sh:ro" "$IMAGE" sh /install.sh --dry-run --method "$METHOD" | tee out.txt
+          grep -qi "$expect" out.txt || { echo "::error::expected the $METHOD steps"; exit 1; }
+
+      # Every system can take the self-contained package, and its checks must pass here: the C
+      # library is recent enough, and the release files are looked for where they should be.
+      - name: Dry run, the self-contained package
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: |
+          docker run --rm -v "$PWD/build-aux/install.sh:/install.sh:ro" "$IMAGE" sh /install.sh --dry-run --method bundle | tee out.txt
+          grep -q 'SHA256SUMS' out.txt || { echo "::error::expected the package steps"; exit 1; }
+          ! grep -q 'needs the C library' out.txt || { echo "::error::the C library is too old"; exit 1; }
