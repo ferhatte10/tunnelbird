@@ -111,8 +111,8 @@ During development, `cargo run` is enough.
 
 ## Packages
 
-- **Flatpak** (Flathub: Fedora, Mint, Debian, Arch, KDE…): [build-aux/flatpak](build-aux/flatpak/README.md)
-- **Snap** (Ubuntu App Center): [snap](snap/README.md)
+- **One command**, from the website (no store): `curl -fsSL https://tunnelbird.ferhatsn.fr/install.sh | sh`
+- **`.deb` and `.rpm`**: [build-aux/packaging](build-aux/packaging/README.md)
 
 What comes next (one-line installer, APT/DNF repositories, website): [docs/ROADMAP.md](docs/ROADMAP.md).
 

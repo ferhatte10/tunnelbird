@@ -58,7 +58,7 @@ Start Tunnelbird with `make run`. Report each line as OK or what went wrong.
 | 12 | Import `files.ovpn` **with** its four files selected together | One tunnel imported, the four files are not reported as errors; connects |
 | 13 | Connect a WireGuard® tunnel while the OpenVPN one is up | The OpenVPN tunnel is disconnected first (one at a time) |
 | 14 | Delete the OpenVPN tunnels | Gone from the list and from `nmcli connection`; their `~/.cert/nm-openvpn/tunnelbird-…` folders are gone |
-| 15 | Same as 1–3 in the Flatpak (`flatpak run fr.ferhatsn.Tunnelbird` after reinstalling it) | Same results |
+| 15 | (Removed: the Flatpak is no longer distributed) | |
 | 16 | Without the plugin (only if you want to check: `sudo apt remove network-manager-openvpn-gnome network-manager-openvpn`, reinstall afterwards) | At import: dialog “OpenVPN Support Is Not Installed” with the `apt install` command and a copy button |
 | 17 | IPv6 leak protection (the server carries IPv4 only; your network must have IPv6) | Connected: `nmcli connection show --active` lists “Tunnelbird IPv6 protection”, `curl -6 -m 5 https://ifconfig.co` fails at once, `curl https://ifconfig.co` gives the server's address. Disconnected: the protection is gone. Quit the app, `nmcli connection up <tunnel> --ask`, start the app: the protection comes back |
 | 18 | Logs (menu ⋮ of a tunnel, “View Logs”; WireGuard and OpenVPN) | The lines of this tunnel only, the connection appears live, errors stand out; a wrong password shows the reason and the toast offers “View Logs”; the “Problems” button keeps only warnings and errors; Copy and Save give what is listed (file mode 0600). Flatpak or Snap: the app's own events and a notice with a command. **À tester** |

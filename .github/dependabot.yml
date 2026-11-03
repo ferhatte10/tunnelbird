@@ -1,5 +1,4 @@
-# Dependency updates. After a Cargo update, the Flatpak workflow fails until
-# build-aux/flatpak/cargo-sources.json is regenerated (see .github/workflows/flatpak.yml).
+# Dependency updates.
 version: 2
 updates:
   - package-ecosystem: cargo

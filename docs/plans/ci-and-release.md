@@ -1,7 +1,7 @@
 # Plan: continuous integration and the first release
 
 Status: **written** (2026-10-29) in `.github/`: `check.yml`, `service.yml`,
-`flatpak.yml`, `install-sh.yml`, `website.yml`, `release.yml`, `dependabot.yml`.
+`install-sh.yml`, `website.yml`, `release.yml`, `dependabot.yml`.
 Not run on GitHub yet: the Actions minutes are used up while the repository is
 private (hosted runners are free once it is public). Until then pull requests
 are merged by hand and the site image is published from the owner's computer.
@@ -12,7 +12,7 @@ workflow's exact package list in a clean Ubuntu 24.04 container; `make rpm` with
 workflow's commands (`dnf builddep`) in a clean Fedora 42 container;
 the four `install.sh` dry runs; the release's version check (right and wrong
 tag) and its notes / `latest.json` step; the website image's smoke tests.
-Not checked: the Windows and macOS jobs, the Flatpak action, the arm64
+Not checked: the Windows and macOS jobs, the arm64
 runners, the attestation and `gh release` steps (GitHub only).
 
 ## Goals
@@ -20,7 +20,7 @@ runners, the attestation and `gh release` steps (GitHub only).
 - Every pull request proves the code is formatted, lint-free, tested, and that
   the desktop file and the store listing are valid (`make check`).
 - Every tag `vX.Y.Z` produces, with no manual step: `.deb` and `.rpm` packages
-  for amd64 and arm64, a Flatpak bundle, checksums, a GitHub release with the
+  for amd64 and arm64, checksums, a GitHub release with the
   notes from the metainfo, and the data the website needs (`latest.json`).
 - No secret in CI: only `GITHUB_TOKEN`. Signing keys live in the cluster (see
   `website.md`, “Package repositories”).
@@ -54,22 +54,12 @@ jobs:
   gates are honest: an API newer than that fails the build.
 - Budget: about 4 minutes cold, under 2 with the cache.
 
-### 2. `flatpak.yml`: pull requests touching `build-aux/flatpak/` or `Cargo.lock`
-
-- `flatpak/flatpak-github-actions/flatpak-builder@<sha>` in the container
-  `ghcr.io/flathub-infra/flatpak-github-actions:gnome-50@sha256:…`.
-- Fails when `cargo-sources.json` is stale (offline build), which is the usual
-  mistake after a dependency update. Regenerate it with
-  `flatpak-cargo-generator.py Cargo.lock -o build-aux/flatpak/cargo-sources.json`.
-- Path filter so it does not cost minutes on every pull request.
-
-### 3. `release.yml`: tags `v*`
+### 2. `release.yml`: tags `v*`
 
 | Job | Runner | Output |
 |---|---|---|
 | `deb` (matrix amd64, arm64) | `ubuntu-24.04`, `ubuntu-24.04-arm` | `tunnelbird_X.Y.Z_{amd64,arm64}.deb` via `make deb` (`build-aux/packaging/deb.sh`) |
 | `rpm` (matrix x86_64, aarch64) | same runners, container `fedora:42@sha256:…` | `tunnelbird-X.Y.Z-1.fc42.{x86_64,aarch64}.rpm` via `make rpm` (`tunnelbird.spec`) |
-| `flatpak` | `ubuntu-24.04` | `tunnelbird-X.Y.Z.flatpak` (offline bundle, for testers) |
 | `publish` | `ubuntu-24.04` | GitHub release + `SHA256SUMS` + `latest.json` + build provenance |
 
 - The `.rpm` is built inside Fedora so it links against Fedora's libraries; the
@@ -102,14 +92,12 @@ jobs:
 
 Budget per release: about 25 minutes over all jobs (free once public).
 
-### 4. Dependabot
+### 3. Dependabot
 
 - `cargo` and the website's `bun` weekly, grouped minor/patch;
   `github-actions` and the website's base images (`docker`) monthly.
-- After a `cargo` update, the Flatpak job reminds to regenerate
-  `cargo-sources.json` (or a small job regenerates it on the Dependabot branch).
 
-### 5. `service.yml`: the core and the service on Windows and macOS
+### 4. `service.yml`: the core and the service on Windows and macOS
 
 - `windows-2025` and `macos-15`: clippy `-D warnings`, tests and a release
   build of `tunnelbird-core` (without gettext) and `tunnelbird-service`.
@@ -118,13 +106,13 @@ Budget per release: about 25 minutes over all jobs (free once public).
   written without Windows and may fail at first (`docs/WINDOWS.md`,
   `docs/MACOS.md`).
 
-### 6. `install-sh.yml` and `website.yml`
+### 5. `install-sh.yml` and `website.yml`
 
 - `install.sh --dry-run` in Ubuntu 24.04, Debian 13, Fedora 42 and Arch
-  containers (pinned by digest): each must choose apt, apt, dnf, Flatpak.
+  containers (pinned by digest): each must choose apt, apt, dnf, and “other” (no package yet).
 - `website.yml`: see `website.md`, “Deployment”.
 
-### 7. The macOS `.dmg` (not written yet)
+### 6. The macOS `.dmg` (not written yet)
 
 Today `apple/make-dmg.sh` runs on the owner's Mac. To build it in CI: a
 `macos-15` job (Apple silicon) on the tag, with `brew install openvpn`, running
@@ -146,10 +134,11 @@ test it.
 2. Packaging: done (`make deb`, `make rpm`), checked in clean Ubuntu 24.04
    and Fedora 42 containers; install on a real desktop VM once before the tag.
 3. Set the release date in the metainfo, tag `v0.1.0`, push the tag.
-4. Check the release page: 4 packages, the bundle, `SHA256SUMS`, `latest.json`,
+4. Check the release page: 4 packages, `SHA256SUMS`, `latest.json`,
    attestations.
-5. Then the website publishes the repositories (`website.md`) and Flathub gets
-   its pull request (`build-aux/flathub/README.md`).
+5. Then the website publishes the repositories (`website.md`).
+6. There is no store: neither Flathub nor the Snap Store (decision of 2026-11-03).
+   The install script is the one way in.
 
 ## Testing it before spending minutes
 

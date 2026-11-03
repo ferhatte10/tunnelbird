@@ -56,11 +56,11 @@ Busy button = spinner and changed label.
 | Page | Content |
 |---|---|
 | Home | Name, one sentence, the main screenshot (theme follows the visitor), “Install” button detecting the distribution from the user agent when possible, five strengths with a screenshot each (import + preview, live graph and location, trusted networks, top bar, QR sharing), “Free and open source” with the GitHub link |
-| Install | Tabs per family: Ubuntu / Debian / Mint, Fedora, Flathub, Snap Store, “Other” (Flatpak bundle, build from source). Each tab: the one-line command with a copy button, then the steps it runs, readable, so nothing is hidden. Link to `install.sh` source. Requirements (NetworkManager, Linux 5.6+) |
-| Docs | Getting started (import a file, preview, connect), trusted networks and the strict check, sharing (file, QR) with the private-key warning, top bar and background mode, updates per install method, troubleshooting (no top bar icon on GNOME without the extension, Snap `snap connect` commands, “server does not answer”), FAQ |
+| Install | Tabs: Linux (one command for every distribution), macOS, Windows (“coming soon”), build from source. Each tab: the one-line command with a copy button, then the steps it runs, readable, so nothing is hidden. Link to `install.sh` source. Requirements (NetworkManager, Linux 5.6+) |
+| Docs | Getting started (import a file, preview, connect), trusted networks and the strict check, sharing (file, QR) with the private-key warning, top bar and background mode, updates per install method, troubleshooting (no top bar icon on GNOME without the extension, “server does not answer”), FAQ |
 | Privacy | What leaves the computer: the public-IP lookup (ifconfig.co) when connected, the daily `latest.json` check (can be turned off), nothing else; no account, no telemetry. The site itself: no cookies but the language and theme choices, no analytics (**Decision**: or the same self-hosted analytics as the portfolio) |
 | Changelog | Generated at build time from the metainfo `<releases>` (one source of truth) |
-| Download | Direct `.deb` / `.rpm` / Flatpak bundle links of the latest release, with SHA-256 and the `gh attestation verify` command |
+| Download | Direct `.deb` / `.rpm` links of the latest release, with SHA-256 and the `gh attestation verify` command |
 | 404 | Same identity, links to Home and Install |
 
 Every page: English and French, no hard-coded text, empty/error/loading states,
@@ -82,8 +82,9 @@ phone and desktop, day and night. Open Graph images in both languages.
 - Reads `/etc/os-release`: Debian family → add the key and
   `deb [signed-by=…] https://tunnelbird.ferhatsn.fr/apt stable main`, then
   `apt install tunnelbird`; Fedora family → `/etc/yum.repos.d/tunnelbird.repo`
-  with `gpgcheck=1`, then `dnf install tunnelbird`; anything else → Flatpak from
-  Flathub (installs the Flathub remote if missing, asks first).
+  with `gpgcheck=1`, then `dnf install tunnelbird`; anything else → the self-contained package
+  (GTK and libadwaita inside, installed in the home folder; planned). On macOS
+  the same command installs the app (planned).
 - Checks NetworkManager is running and warns otherwise.
 - Tested in CI (or locally with Podman) in Ubuntu 24.04, Debian 13,
   Fedora 42 containers with `--dry-run`, plus one real install per family.
