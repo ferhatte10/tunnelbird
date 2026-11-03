@@ -1220,6 +1220,11 @@ impl Ui {
                     self.toggle(tunnel, false);
                 }
             }
+            // The dialog needs the window as its parent, hidden or not.
+            TrayAction::Preferences => {
+                self.window.present();
+                self.app.activate_action("preferences", None);
+            }
             TrayAction::Quit => self.app.quit(),
         }
     }
@@ -1275,6 +1280,7 @@ impl Ui {
             },
             open_label: gettext("Open Tunnelbird"),
             disconnect_label: gettext("Disconnect"),
+            preferences_label: gettext("Preferences…"),
             quit_label: gettext("Quit"),
             ..TrayModel::default()
         });
