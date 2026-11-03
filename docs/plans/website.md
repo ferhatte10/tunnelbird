@@ -80,12 +80,20 @@ phone and desktop, day and night. Open Graph images in both languages.
 - Reads `/etc/os-release`: Debian family → add the key and
   `deb [signed-by=…] https://tunnelbird.ferhatsn.fr/apt stable main`, then
   `apt install tunnelbird`; Fedora family → `/etc/yum.repos.d/tunnelbird.repo`
-  with `gpgcheck=1`, then `dnf install tunnelbird`; anything else → the self-contained package
-  (GTK and libadwaita inside, installed in the home folder; planned). On macOS
-  the same command installs the app (planned).
-- Checks NetworkManager is running and warns otherwise.
-- Tested in CI (or locally with Podman) in Ubuntu 24.04, Debian 13,
-  Fedora 42 containers with `--dry-run`, plus one real install per family.
+  with `gpgcheck=1`, then `dnf install tunnelbird`; anything else, or while the
+  repository does not answer → the self-contained package (GTK and libadwaita
+  inside, `build-aux/bundle/`): it downloads the release's `SHA256SUMS` and the
+  package, checks the checksum, and installs in the home folder (no
+  administrator), with a launcher and a menu entry. On macOS the same command
+  will install the app (planned).
+- Checks NetworkManager is running, and for the package: `curl`, `tar`, `bash`,
+  a C library of 2.39 or newer, `shared-mime-info`, fonts, and with `ldd` the
+  system libraries it does not carry. `--uninstall` removes the package.
+- Tested in CI in Ubuntu 24.04, Debian 13, Fedora 42 and Arch containers with
+  `--dry-run`; really installed, started, updated and removed in the same four
+  containers against a local release folder (`TUNNELBIRD_DOWNLOAD_BASE`), and
+  refused on Debian 12 (C library too old), Alpine (not glibc) and with a wrong
+  checksum. Never against a real release yet.
 
 ## Package repositories and signing
 

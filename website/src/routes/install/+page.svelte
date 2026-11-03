@@ -23,7 +23,7 @@ rm -rf /Applications/Tunnelbird.app`;
 	const uninstall = [
 		{ label: m.tab_apt, command: 'sudo apt remove tunnelbird' },
 		{ label: m.tab_dnf, command: 'sudo dnf remove tunnelbird' },
-		{ label: m.uninstall_script, command: 'rm -rf ~/.local/share/tunnelbird ~/.local/bin/tunnelbird' },
+		{ label: m.uninstall_script, command: 'curl -fsSL https://tunnelbird.ferhatsn.fr/install.sh | sh -s -- --uninstall' },
 		{ label: m.tab_macos, command: macosUninstall },
 		{ label: m.tab_source, command: 'sudo make uninstall' }
 	];
