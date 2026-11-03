@@ -14,7 +14,8 @@ permissions:
   contents: read
 
 jobs:
-  # The tag, Cargo.toml, the .spec and the store listing must announce the same version.
+  # The tag, Cargo.toml, the .spec, the store listing and the macOS Info.plist must announce the same version
+  # (build-aux/release.sh moves them all).
   version:
     runs-on: ubuntu-24.04
     outputs:
@@ -31,9 +32,10 @@ jobs:
           cargo=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)
           spec=$(sed -n 's/^Version: *//p' build-aux/packaging/tunnelbird.spec)
           listing=$(grep -o '<release version="[^"]*"' data/fr.ferhatsn.Tunnelbird.metainfo.xml | head -n1 | cut -d'"' -f2)
-          echo "tag $tag, Cargo.toml $cargo, .spec $spec, metainfo $listing"
-          [ "$tag" = "$cargo" ] && [ "$tag" = "$spec" ] && [ "$tag" = "$listing" ] || {
-            echo "::error::the tag, Cargo.toml, tunnelbird.spec and the metainfo's newest <release> must match"
+          plist=$(sed -n 's|.*CFBundleShortVersionString</key><string>\([^<]*\)</string>.*|\1|p' apple/Resources/Info.plist | head -n1)
+          echo "tag $tag, Cargo.toml $cargo, .spec $spec, metainfo $listing, Info.plist $plist"
+          [ "$tag" = "$cargo" ] && [ "$tag" = "$spec" ] && [ "$tag" = "$listing" ] && [ "$tag" = "$plist" ] || {
+            echo "::error::the tag, Cargo.toml, tunnelbird.spec, the metainfo's newest <release> and the macOS Info.plist must match"
             exit 1
           }
           echo "version=$tag" >> "$GITHUB_OUTPUT"
