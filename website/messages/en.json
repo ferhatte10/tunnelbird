@@ -47,7 +47,7 @@
 	"tab_source_text": "You need Rust, GTK 4.14 and libadwaita 1.5 or later.",
 	"tab_soon_title": "Coming soon",
 	"tab_windows_text": "A native Windows app, built on the same core, is being written. It will be a free download from this site, with no store and no account.",
-	"tab_macos_text": "A native menu bar app for macOS on Apple silicon. The same command downloads it and installs it in Applications, with no store and no account.",
+	"tab_macos_text": "A native menu bar app for macOS on Apple silicon is built and being tested. Once released, the same command will install it, with no store and no account.",
 	"tab_soon_follow": "Follow the progress on GitHub",
 	"install_links_script": "Read the script first",
 	"install_links_steps": "Do it step by step",

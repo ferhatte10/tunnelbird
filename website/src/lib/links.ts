@@ -18,10 +18,10 @@ export const INSTALL_COMMAND = 'curl -fsSL https://tunnelbird.ferhatsn.fr/instal
 
 export type Method = 'linux' | 'macos' | 'windows' | 'source';
 
-/** The command of each way to install; none yet for Windows. */
+/** The command of each way to install; none yet for macOS (built, not released) and Windows. */
 export const COMMANDS: Record<Method, string | null> = {
 	linux: INSTALL_COMMAND,
-	macos: INSTALL_COMMAND,
+	macos: null,
 	source: 'git clone https://github.com/ferhatte10/tunnelbird && cd tunnelbird && make && sudo make install',
 	windows: null
 };
