@@ -134,7 +134,9 @@ test it.
    `check`).
 2. Packaging: done (`make deb`, `make rpm`), checked in clean Ubuntu 24.04
    and Fedora 42 containers; install on a real desktop VM once before the tag.
-3. Set the release date in the metainfo, tag `v0.1.0`, push the tag.
+3. Set the release date in the metainfo, tag `v0.1.0`, push the tag. Later releases:
+   `build-aux/release.sh X.Y.Z "note"…` moves every file that carries the version, then
+   pull request, merge, tag.
 4. Check the release page: 4 packages, `SHA256SUMS`, `latest.json`,
    attestations.
 5. Then the website publishes the repositories (`website.md`).
