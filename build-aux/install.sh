@@ -153,7 +153,7 @@ if [ "$(uname -s)" = Darwin ]; then
   note "System: macOS $(sw_vers -productVersion 2> /dev/null) ($arch)"
   [ "$dry_run" = true ] && note "Dry run: nothing will be changed."
   tmp=$(mktemp -d)
-  trap 'hdiutil detach -quiet "$tmp/disk" 2> /dev/null; rm -rf "$tmp"' EXIT
+  trap 'hdiutil detach -quiet "$tmp/disk" 2> /dev/null || true; rm -rf "$tmp"' EXIT
 
   say "1/4 Finding the latest release"
   run curl -fsSL "$DOWNLOAD/SHA256SUMS" -o "$tmp/SHA256SUMS"
