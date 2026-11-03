@@ -17,8 +17,8 @@ write **Tested** for what was actually run.
 
 | Architecture | Also called | `.deb` / `.rpm` | Self-contained package | From source |
 |---|---|---|---|---|
-| x86_64 | amd64, Intel / AMD 64-bit | Planned (CI) | Planned (CI) | **Tested** |
-| aarch64 | arm64 (Raspberry Pi 4/5 64-bit, ARM laptops, ARM servers) | Planned (CI) | Planned (CI) | Expected |
+| x86_64 | amd64, Intel / AMD 64-bit | Planned (CI) | Written (CI), started on Ubuntu 26.04 only | **Tested** |
+| aarch64 | arm64 (Raspberry Pi 4/5 64-bit, ARM laptops, ARM servers) | Planned (CI) | Written (CI), never run | Expected |
 | others (riscv64, ppc64le, armv7…) | | No | No | Expected: pure Rust + GTK, untested |
 
 ### Requirements

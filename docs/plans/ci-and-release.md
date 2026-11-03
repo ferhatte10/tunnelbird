@@ -1,7 +1,7 @@
 # Plan: continuous integration and the first release
 
 Status: **written** (2026-10-29) in `.github/`: `check.yml`, `service.yml`,
-`install-sh.yml`, `website.yml`, `release.yml`, `dependabot.yml`.
+`bundle.yml`, `install-sh.yml`, `website.yml`, `release.yml`, `dependabot.yml`.
 Not run on GitHub yet: the Actions minutes are used up while the repository is
 private (hosted runners are free once it is public). Until then pull requests
 are merged by hand and the site image is published from the owner's computer.
@@ -20,7 +20,7 @@ runners, the attestation and `gh release` steps (GitHub only).
 - Every pull request proves the code is formatted, lint-free, tested, and that
   the desktop file and the store listing are valid (`make check`).
 - Every tag `vX.Y.Z` produces, with no manual step: `.deb` and `.rpm` packages
-  for amd64 and arm64, checksums, a GitHub release with the
+  for amd64 and arm64, a self-contained package for each (GTK inside), checksums, a GitHub release with the
   notes from the metainfo, and the data the website needs (`latest.json`).
 - No secret in CI: only `GITHUB_TOKEN`. Signing keys live in the cluster (see
   `website.md`, “Package repositories”).
@@ -60,6 +60,7 @@ jobs:
 |---|---|---|
 | `deb` (matrix amd64, arm64) | `ubuntu-24.04`, `ubuntu-24.04-arm` | `tunnelbird_X.Y.Z_{amd64,arm64}.deb` via `make deb` (`build-aux/packaging/deb.sh`) |
 | `rpm` (matrix x86_64, aarch64) | same runners, container `fedora:42@sha256:…` | `tunnelbird-X.Y.Z-1.fc42.{x86_64,aarch64}.rpm` via `make rpm` (`tunnelbird.spec`) |
+| `bundle` (matrix amd64, arm64) | `ubuntu-24.04`, `ubuntu-24.04-arm` | `tunnelbird-X.Y.Z-linux-{x86_64,aarch64}.tar.gz` via `build-aux/bundle/build.sh`, started in a virtual screen by `smoke.sh` before it is published |
 | `publish` | `ubuntu-24.04` | GitHub release + `SHA256SUMS` + `latest.json` + build provenance |
 
 - The `.rpm` is built inside Fedora so it links against Fedora's libraries; the

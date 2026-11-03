@@ -1,0 +1,58 @@
+name: Bundle
+
+# The self-contained package (build-aux/bundle/README.md): built on Ubuntu 24.04, then started in a
+# virtual screen. Only when it can change: it takes a few minutes and, on arm64, a runner that costs
+# more while the repository is private.
+
+on:
+  pull_request:
+    paths:
+      - build-aux/bundle/**
+      - Cargo.lock
+      - .github/workflows/bundle.yml
+  push:
+    branches:
+      - main
+    paths:
+      - build-aux/bundle/**
+      - Cargo.lock
+      - .github/workflows/bundle.yml
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    name: bundle (${{ matrix.runner }})
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install the build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-4-dev libadwaita-1-dev libsoup-3.0-dev gettext libglib2.0-bin adwaita-icon-theme librsvg2-common patchelf xvfb xauth fonts-dejavu-core
+
+      - name: Rust (stable)
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: Build the package
+        run: build-aux/bundle/build.sh
+
+      - name: Start it
+        run: build-aux/bundle/smoke.sh target/bundle/tunnelbird-*-linux-*.tar.gz
