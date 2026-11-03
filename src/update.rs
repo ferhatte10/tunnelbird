@@ -30,7 +30,7 @@ use crate::version;
 
 const LATEST_URL: &str = "https://tunnelbird.ferhatsn.fr/latest.json";
 /// Where a package downloaded by hand finds its newer version.
-pub const DOWNLOAD_URL: &str = "https://tunnelbird.ferhatsn.fr/download";
+pub const DOWNLOAD_URL: &str = "https://tunnelbird.ferhatsn.fr/install/";
 /// Repository files written by the website's `install.sh`.
 const APT_SOURCES: [&str; 2] = [
     "/etc/apt/sources.list.d/tunnelbird.sources",
