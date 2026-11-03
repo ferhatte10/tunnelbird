@@ -13,15 +13,14 @@
 # refuses other types). Run `down` when the tests are over.
 #
 # Settings (environment): AWS_REGION (default eu-north-1, Stockholm, so the
-# app shows another country; the owner's AWS organisation only allows that
-# region), SSH_KEY (private key path, default
-# ~/.ssh/id_ferhatdzroot; only its .pub is sent), OUT (where profiles go,
+# app shows another country; some AWS organisations only allow one region),
+# SSH_KEY (private key path, default ~/.ssh/id_ed25519; only its .pub is sent), OUT (where profiles go,
 # default ~/tunnelbird-openvpn-test, outside the repository).
 set -eu
 
 REGION=${AWS_REGION:-eu-north-1}
 NAME=tunnelbird-openvpn-test
-KEY=${SSH_KEY:-$HOME/.ssh/id_ferhatdzroot}
+KEY=${SSH_KEY:-$HOME/.ssh/id_ed25519}
 OUT=${OUT:-$HOME/tunnelbird-openvpn-test}
 TYPE=t4g.micro
 HERE=$(cd "$(dirname "$0")" && pwd)

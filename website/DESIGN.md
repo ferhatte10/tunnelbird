@@ -1,6 +1,6 @@
 # Tunnelbird website: design
 
-Direction validated by the owner (2026-10-30): **A+B**, the night atmosphere
+Direction validated by the maintainer (2026-10-30): **A+B**, the night atmosphere
 of the app icon with the clarity of GNOME-style pages, in two themes. The
 mock-ups are on the design canvas “Tunnelbird site directions” (pages
 “A+B · Nuit” and “A+B · Jour”). Read this before changing a page.

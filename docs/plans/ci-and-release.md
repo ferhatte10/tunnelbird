@@ -4,7 +4,7 @@ Status: **written** (2026-10-29) in `.github/`: `check.yml`, `service.yml`,
 `install-sh.yml`, `website.yml`, `release.yml`, `dependabot.yml`.
 Not run on GitHub yet: the Actions minutes are used up while the repository is
 private (hosted runners are free once it is public). Until then pull requests
-are merged by hand and the site image is published from the owner's computer.
+are merged by hand and the site image is published from the maintainer's computer.
 
 Checked locally (2026-10-29): `actionlint` 1.7.12 (with ShellCheck on every
 `run` block) clean; `make check`, the ShellCheck step and `make deb` with the
@@ -22,7 +22,7 @@ runners, the attestation and `gh release` steps (GitHub only).
 - Every tag `vX.Y.Z` produces, with no manual step: `.deb` and `.rpm` packages
   for amd64 and arm64, checksums, a GitHub release with the
   notes from the metainfo, and the data the website needs (`latest.json`).
-- No secret in CI: only `GITHUB_TOKEN`. Signing keys live in the cluster (see
+- No secret in CI: only `GITHUB_TOKEN`. Signing keys live on the server that serves the repositories (see
   `website.md`, “Package repositories”).
 - Every action pinned by commit SHA (`uses: owner/action@<sha> # vX.Y.Z`),
   every container image by digest, every downloaded tool by version + SHA-256.
@@ -114,7 +114,7 @@ Budget per release: about 25 minutes over all jobs (free once public).
 
 ### 6. The macOS `.dmg` (not written yet)
 
-Today `apple/make-dmg.sh` runs on the owner's Mac. To build it in CI: a
+Today `apple/make-dmg.sh` runs on the maintainer's Mac. To build it in CI: a
 `macos-15` job (Apple silicon) on the tag, with `brew install openvpn`, running
 `apple/make-dmg.sh`; the `.dmg` goes to the release with its checksum and
 attestation, and `latest.json` gets the macOS download so the app's update
@@ -125,7 +125,7 @@ test it.
 ## Branch protection (when public)
 
 - `main` protected: pull request required, `check` required, squash merge.
-- Never enable “include administrators” without the owner's say-so.
+- Never enable “include administrators” without the maintainer's say-so.
 
 ## First release, step by step
 

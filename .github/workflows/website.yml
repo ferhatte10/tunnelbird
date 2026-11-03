@@ -1,9 +1,8 @@
 name: Website
 
 # tunnelbird.ferhatsn.fr. Every pull request that touches the site builds its image (the build runs
-# the type check, the contrast test and the static build), scans it and serves it the way the cluster
-# does. On main, the same image is published to GHCR; the cluster (ferhat-k8s/apps/tunnelbird) then
-# deploys it by itself: Argo CD Image Updater sees the new “latest” and pins its digest.
+# the type check, the contrast test and the static build), scans it and serves it the way the host
+# does. On main, the same image is published to GHCR, and the host deploys it by itself.
 
 on:
   pull_request:
@@ -72,7 +71,7 @@ jobs:
           { echo "### tunnelbird-website (HIGH/CRITICAL, fixable or not)"; echo '```'; cat trivy.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           exit $status
 
-      # As in the cluster: read-only, no capability, a writable /tmp only.
+      # As on the host: read-only, no capability, a writable /tmp only.
       - name: Serve the image
         run: |
           docker run -d --name site -p 8080:8080 --read-only --tmpfs /tmp --cap-drop ALL \
@@ -104,7 +103,7 @@ jobs:
           grep -qi '^content-type: text/plain' /tmp/headers
           # The 404 page is drawn in the browser (SvelteKit's fallback): check the app is served.
           check /does-not-exist 404 '/_app/immutable/'
-          # Relative redirect: the public host and scheme belong to Traefik.
+          # Relative redirect: the public host and scheme belong to the reverse proxy.
           check /install 301
           grep -qi '^location: /install/' /tmp/headers
           # Security headers on every answer, and nothing that names the server.

@@ -21,7 +21,7 @@ are not committed.
 
 ## Container image
 
-What the cluster runs: the built pages in an unprivileged nginx (uid 101,
+What the site runs on: the built pages in an unprivileged nginx (uid 101,
 port 8080, read-only, only `/tmp` written). Built from the repository root,
 because the site copies the app's files at build time:
 
