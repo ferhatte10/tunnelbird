@@ -15,11 +15,11 @@ write **Tested** for what was actually run.
 
 ### Processors
 
-| Architecture | Also called | Flatpak (Flathub) | Snap | `.deb` / `.rpm` | From source |
-|---|---|---|---|---|---|
-| x86_64 | amd64, Intel / AMD 64-bit | **Tested** (local build) | Expected | Planned (CI) | **Tested** |
-| aarch64 | arm64 (Raspberry Pi 4/5 64-bit, ARM laptops, ARM servers) | Expected (Flathub builds it) | Expected | Planned (CI) | Expected |
-| others (riscv64, ppc64le, armv7…) | | No (not built by Flathub for us) | No | No | Expected: pure Rust + GTK, untested |
+| Architecture | Also called | `.deb` / `.rpm` | Self-contained package | From source |
+|---|---|---|---|---|
+| x86_64 | amd64, Intel / AMD 64-bit | Planned (CI) | Planned (CI) | **Tested** |
+| aarch64 | arm64 (Raspberry Pi 4/5 64-bit, ARM laptops, ARM servers) | Planned (CI) | Planned (CI) | Expected |
+| others (riscv64, ppc64le, armv7…) | | No | No | Expected: pure Rust + GTK, untested |
 
 ### Requirements
 
@@ -27,7 +27,7 @@ write **Tested** for what was actually run.
 |---|---|---|
 | NetworkManager | 1.16 | Native WireGuard® profiles; Tunnelbird drives it over D-Bus |
 | Linux kernel | 5.6 | WireGuard® built into the kernel (older kernels need the `wireguard` module) |
-| GTK | 4.14 | Interface (native packages; the Flatpak and the Snap bring their own) |
+| GTK | 4.14 | Interface (native packages; the self-contained package brings its own) |
 | libadwaita | 1.5 | Interface (same) |
 | libsoup | 3.0 | Public IP and location lookup, update check |
 | OpenVPN plugin of NetworkManager | 1.10 recommended | Only for `.ovpn` profiles. Packages: `network-manager-openvpn-gnome` (Debian, Ubuntu), `NetworkManager-openvpn-gnome` (Fedora), `networkmanager-openvpn` (Arch). Tunnelbird shows the command if it is missing |
@@ -35,21 +35,24 @@ write **Tested** for what was actually run.
 
 ### Distributions
 
-Native packages need GTK 4.14 and libadwaita 1.5; anything older uses the
-Flatpak, which brings them. Any distribution where NetworkManager manages the
-network works through the Flatpak.
+There is no store: everything installs with the one-line script on the website.
+On Ubuntu, Debian, Mint and Fedora it adds Tunnelbird's repository (native
+packages, GTK 4.14 and libadwaita 1.5 from the system). Elsewhere it installs a
+self-contained package that brings GTK and libadwaita; it is built on Ubuntu
+24.04, so the system's C library must be as recent (glibc 2.39). Either way
+NetworkManager must manage the network.
 
-| Distribution | Native package | Flatpak | Notes |
+| Distribution | Native package | Self-contained package | Notes |
 |---|---|---|---|
-| Ubuntu 26.04 LTS | **Tested** (source build, `make install`) | **Tested** | Reference machine, see below |
-| Ubuntu 24.04 LTS | Expected (oldest target: GTK 4.14, libadwaita 1.5) | Expected | The CI will build on it (`docs/plans/ci-and-release.md`) |
-| Linux Mint 22, Pop!_OS 24.04, elementary OS 8, Zorin OS (24.04 base) | Expected (Ubuntu 24.04 packages) | Expected | |
-| Debian 13 “trixie” | Expected | Expected | |
-| Debian 12 “bookworm” | No (GTK 4.8) | Expected | Use the Flatpak |
-| Fedora 41 and later | Expected | Expected | SELinux: OpenVPN certificates go to `~/.cert/nm-openvpn`, where it allows them |
-| openSUSE Tumbleweed | From source | Expected | |
-| Arch, Manjaro, EndeavourOS | From source (AUR later) | Expected | OpenVPN plugin not installed by default |
-| RHEL / AlmaLinux / Rocky 10 | Not packaged | Expected | |
+| Ubuntu 26.04 LTS | **Tested** (source build, `make install`) | Planned | Reference machine, see below |
+| Ubuntu 24.04 LTS | Expected (oldest target: GTK 4.14, libadwaita 1.5) | Planned | The CI builds on it (`docs/plans/ci-and-release.md`) |
+| Linux Mint 22, Pop!_OS 24.04, elementary OS 8, Zorin OS (24.04 base) | Expected (Ubuntu 24.04 packages) | Planned | |
+| Debian 13 “trixie” | Expected | Planned | |
+| Debian 12 “bookworm” | No (GTK 4.8) | No (glibc 2.36) | Not supported |
+| Fedora 41 and later | Expected | Planned | SELinux: OpenVPN certificates go to `~/.cert/nm-openvpn`, where it allows them |
+| openSUSE Tumbleweed | From source | Planned | |
+| Arch, Manjaro, EndeavourOS | From source (AUR later) | Planned | OpenVPN plugin not installed by default |
+| RHEL / AlmaLinux / Rocky 10 | Not packaged | Planned | |
 | Systems without NetworkManager (servers using systemd-networkd or netplan only, Alpine…) | No | No | Tunnelbird hands tunnels to NetworkManager |
 | WSL, ChromeOS Linux container | No | No | No NetworkManager-managed network |
 
@@ -90,7 +93,6 @@ Everything marked **Tested** on Linux was run on:
 - GNOME Shell 50.1 on Wayland
 - NetworkManager 1.54.3, OpenVPN plugin 1.12.5, OpenVPN 2.7.0
 - GTK 4.22.4, libadwaita 1.9.1, libsoup 3.6.6
-- Flatpak 1.16.6, GNOME 50 runtime
 
 ## Windows and macOS
 

@@ -6,16 +6,13 @@
 	import CommandBox from './CommandBox.svelte';
 
 	const methods: { id: Method; label: () => string; text: () => string }[] = [
-		{ id: 'apt', label: m.tab_apt, text: m.tab_apt_text },
-		{ id: 'dnf', label: m.tab_dnf, text: m.tab_dnf_text },
-		{ id: 'flatpak', label: m.tab_flatpak, text: m.tab_flatpak_text },
-		{ id: 'snap', label: m.tab_snap, text: m.tab_snap_text },
-		{ id: 'windows', label: m.tab_windows, text: m.tab_windows_text },
+		{ id: 'linux', label: m.tab_linux, text: m.tab_linux_text },
 		{ id: 'macos', label: m.tab_macos, text: m.tab_macos_text },
+		{ id: 'windows', label: m.tab_windows, text: m.tab_windows_text },
 		{ id: 'source', label: m.tab_source, text: m.tab_source_text }
 	];
 
-	let selected = $state<string>('apt');
+	let selected = $state<string>('linux');
 </script>
 
 <Tabs.Root bind:value={selected} class="flex flex-col gap-5">
