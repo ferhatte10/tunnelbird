@@ -118,9 +118,14 @@ What comes next (one-line installer, APT/DNF repositories, website): [docs/ROADM
 
 ## macOS
 
-A native macOS app (SwiftUI, in `apple/`) exists and runs on a Mac with Apple
-silicon, but it is **not released yet**: the website still says “coming soon”.
-What was really run, and on which machine, is in
+A native macOS app (SwiftUI, in `apple/`) for Macs with Apple silicon. Install
+it with the same command as on Linux:
+
+```sh
+curl -fsSL https://tunnelbird.ferhatsn.fr/install.sh | sh
+```
+
+It puts the app in `~/Applications`, without an administrator's password. What was really run, and on which machine, is in
 [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
 - A menu bar app and a main window with the features above: tunnel list,
@@ -128,14 +133,15 @@ What was really run, and on which machine, is in
   health, logs of each tunnel, trusted networks, notifications, update notice.
   English and French, light and dark.
 - WireGuard® and OpenVPN profiles. Nothing is bought: no App Store, no paid
-  Apple account. The app will be a `.dmg` downloaded from the website, with
+  Apple account. The app comes in a `.dmg` (attached to each release), with
   OpenVPN inside.
 - A helper that runs as root (a launchd daemon) makes the tunnels. The app
   installs it from its first screen, once, and macOS asks for the
   administrator's password. It never connects anything by itself: the app
   decides and asks it.
-- The app is not signed with a paid account, so macOS blocks its first launch of
-  each version: open System Settings › Privacy & Security and choose “Open
+- The app is not signed with a paid account. Installed with the command above it
+  opens normally; a `.dmg` downloaded in a browser is blocked at its first launch
+  of each version: open System Settings › Privacy & Security and choose “Open
   Anyway” (when macOS offers “Done” and “Move to Trash”, choose “Done”).
 - macOS 13 Ventura or later. Only macOS 27.2 on Apple silicon was run; Intel is
   not built yet.

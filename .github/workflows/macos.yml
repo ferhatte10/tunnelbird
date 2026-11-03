@@ -1,0 +1,74 @@
+name: macOS
+
+# The macOS app's disk image (apple/make-dmg.sh): built on a GitHub Mac (Apple silicon), checked, then
+# installed with the website's install.sh from a local folder. Only when it can change: a Mac
+# runner costs more minutes than a Linux one while the repository is private.
+
+on:
+  pull_request:
+    paths:
+      - apple/**
+      - crates/service/**
+      - crates/core/**
+      - vendor/**
+      - build-aux/install.sh
+      - .github/workflows/macos.yml
+  push:
+    branches:
+      - main
+    paths:
+      - apple/**
+      - crates/service/**
+      - crates/core/**
+      - vendor/**
+      - build-aux/install.sh
+      - .github/workflows/macos.yml
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  dmg:
+    runs-on: macos-15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Rust (stable)
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+
+      - name: OpenVPN, to put in the app
+        run: brew install openvpn
+
+      - name: Build the disk image
+        run: apple/make-dmg.sh
+
+      - name: Check it
+        run: apple/smoke.sh apple/build/Tunnelbird-*-arm64.dmg
+
+      # The script a visitor runs, pointed at a folder instead of GitHub.
+      - name: Install it with install.sh
+        run: |
+          mkdir release
+          cp apple/build/Tunnelbird-*-arm64.dmg release/
+          (cd release && shasum -a 256 -- * > SHA256SUMS && cat SHA256SUMS)
+          TUNNELBIRD_DOWNLOAD_BASE="file://$PWD/release" sh build-aux/install.sh
+          test -d "$HOME/Applications/Tunnelbird.app"
+          codesign --verify --deep --strict "$HOME/Applications/Tunnelbird.app"
+          xattr -l "$HOME/Applications/Tunnelbird.app" | grep -q quarantine && { echo "::error::the app is quarantined"; exit 1; } || true
+
+      - name: Remove it with install.sh
+        run: |
+          sh build-aux/install.sh --uninstall
+          test ! -e "$HOME/Applications/Tunnelbird.app"
