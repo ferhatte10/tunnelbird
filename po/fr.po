@@ -777,3 +777,15 @@ msgstr "Aucun problème sur ce tunnel."
 
 msgid "Preferences…"
 msgstr "Préférences…"
+
+msgid "Check for Updates…"
+msgstr "Rechercher les mises à jour…"
+
+msgid "Check for _Updates"
+msgstr "Rechercher les _mises à jour"
+
+msgid "Cannot check for updates right now"
+msgstr "Impossible de rechercher les mises à jour pour le moment"
+
+msgid "Tunnelbird is up to date"
+msgstr "Tunnelbird est à jour"

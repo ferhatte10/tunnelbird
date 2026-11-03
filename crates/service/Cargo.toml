@@ -1,6 +1,6 @@
 [package]
 name = "tunnelbird-service"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "Tunnelbird's tunnel service for Windows and macOS: stores tunnels and drives the VPN drivers"
 license = "GPL-3.0-or-later"

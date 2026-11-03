@@ -50,7 +50,9 @@ pub enum Install {
     Snap,
     /// From the website's APT or DNF repository: updates come with the system.
     Repository(Manager),
-    /// A `.deb` or `.rpm` downloaded by hand: no repository brings updates.
+    /// A `.deb` or `.rpm` downloaded by hand, or the self-contained package
+    /// the website's `install.sh` unpacks (its `AppRun` sets `APPDIR`): no
+    /// repository brings updates.
     Package,
     Source,
 }
@@ -78,6 +80,8 @@ impl Install {
                 Install::Flatpak
             } else if std::env::var_os("SNAP").is_some() {
                 Install::Snap
+            } else if std::env::var_os("APPDIR").is_some() {
+                Install::Package
             } else if cfg!(debug_assertions) {
                 Install::Source
             } else {
