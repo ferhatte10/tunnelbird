@@ -2,7 +2,7 @@
 	import { Clock, Download, FileCheck, Monitor, Play, QrCode, TrendingUp } from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { localizeHref } from '#lib/paraglide/runtime.js';
-	import { AVAILABLE, FLATHUB, INSTALL_COMMAND } from '#lib/links.js';
+	import { AVAILABLE, INSTALL_COMMAND } from '#lib/links.js';
 	import CommandBox from '#lib/components/CommandBox.svelte';
 	import DemoVideo from '#lib/components/DemoVideo.svelte';
 	import FlightLine from '#lib/components/FlightLine.svelte';
@@ -35,15 +35,12 @@
 		</div>
 		<div class="enter flex flex-wrap items-center gap-x-5 gap-y-3" style="--d: 3">
 			<a
-				href={FLATHUB}
+				href={localizeHref('/install/')}
 				class="press inline-flex min-h-12 items-center gap-2.5 rounded-xl bg-surface px-5 font-bold text-text no-underline hover:text-link"
 			>
 				<Download class="size-5" aria-hidden="true" />
-				{m.hero_flathub()}
+				{m.hero_all_ways()}
 			</a>
-			<span class="text-[0.85rem] text-text-3"
-				>{m.hero_other()} <a href={localizeHref('/install/')}>{m.hero_other_link()}</a></span
-			>
 		</div>
 		{:else}
 			<div class="enter flex flex-col gap-2" style="--d: 2">
