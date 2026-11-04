@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { Tabs } from 'bits-ui';
 	import { m } from '#lib/paraglide/messages.js';
 	import { localizeHref } from '#lib/paraglide/runtime.js';
 	import { AVAILABLE, COMMANDS, GITHUB, INSTALL_SCRIPT_SOURCE, REPOSITORY, type Method } from '#lib/links.js';
+	import { detectSystem } from '#lib/system.js';
 	import CommandBox from './CommandBox.svelte';
 
 	const methods: { id: Method; label: () => string; text: () => string }[] = [
@@ -13,6 +15,11 @@
 	];
 
 	let selected = $state<string>('linux');
+	// The tab of the visitor's system first; the others stay one click away.
+	onMount(() => {
+		const system = detectSystem();
+		if (system === 'macos' || system === 'windows') selected = system;
+	});
 </script>
 
 <Tabs.Root bind:value={selected} class="flex flex-col gap-5">

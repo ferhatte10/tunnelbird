@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { Clock, Download, FileCheck, Monitor, Play, QrCode, TrendingUp } from '@lucide/svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { localizeHref } from '#lib/paraglide/runtime.js';
@@ -10,6 +11,13 @@
 	import Screenshot from '#lib/components/Screenshot.svelte';
 	import TriangleMark from '#lib/components/TriangleMark.svelte';
 	import { reveal } from '#lib/reveal.js';
+	import { detectSystem, type System } from '#lib/system.js';
+
+	let system = $state<System>('linux');
+	onMount(() => (system = detectSystem()));
+	const installLabel = $derived(
+		system === 'macos' ? m.hero_install_macos() : system === 'linux' ? m.hero_install_label() : m.hero_install_other()
+	);
 
 	const features = [
 		{ icon: TrendingUp, title: m.f_traffic_title, text: m.f_traffic_text },
@@ -31,7 +39,7 @@
 		<p class="enter m-0 max-w-[34ch] text-text-2 md:text-[1.1rem]" style="--d: 1">{m.hero_lead()}</p>
 		{#if AVAILABLE}
 		<div class="enter" style="--d: 2">
-			<CommandBox command={INSTALL_COMMAND} label={m.hero_install_label()} />
+			<CommandBox command={INSTALL_COMMAND} label={installLabel} />
 		</div>
 		<div class="enter flex flex-wrap items-center gap-x-5 gap-y-3" style="--d: 3">
 			<a

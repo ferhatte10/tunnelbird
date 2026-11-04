@@ -1,9 +1,11 @@
 # Tunnelbird
 
-A lightweight, modern VPN client for the Linux desktop, with a native macOS
-version on its way ([see below](#macos)).
-Import the `.conf` (WireGuard®) or `.ovpn` (OpenVPN) file from your VPN
-provider or your own server, then connect in one click.
+Tunnelbird is a lightweight, modern VPN client for the Linux desktop (GTK 4 and
+libadwaita), with a native macOS app ([see below](#macos)): a simple graphical
+WireGuard® and OpenVPN client. Import the `.conf` (WireGuard) or `.ovpn`
+(OpenVPN) file from your VPN provider or your own server, then connect in one
+click. On Linux it hands the tunnels to NetworkManager, so they behave like any
+other connection of your system.
 
 > Tunnelbird is a **client only**: it does not create or manage VPN servers.
 

@@ -113,6 +113,14 @@
   </keywords>
 
   <releases>
+    <release version="0.1.3" date="2026-11-04">
+      <description>
+        <ul>
+          <li>The macOS app for Apple silicon is part of the release: the install command works on a Mac.</li>
+          <li>The Download button of the update notice opens the install page.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.2" date="2026-11-04">
       <description>
         <p>Only the version number changes: this release is there to try the update notice.</p>
