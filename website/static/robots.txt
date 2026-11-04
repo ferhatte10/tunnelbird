@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://tunnelbird.ferhatsn.fr/sitemap.xml
