@@ -1,6 +1,6 @@
 [package]
 name = "tunnelbird-core"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2024"
 description = "Tunnelbird's shared logic: tunnel file parsers, providers, trusted networks, versions"
 license = "GPL-3.0-or-later"
