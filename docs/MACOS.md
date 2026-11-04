@@ -157,7 +157,7 @@ update the service, which an update of the app does not reach.
 2. A page of the website for a `.dmg` downloaded in a browser, with the “Open
    Anyway” screenshots. macOS first shows “Move to Trash” as its main button,
    next to “Done”: the page must say to choose “Done”, then Privacy & Security.
-3. Intel: needs `rustup`, Intel builds of OpenVPN's libraries, and a Mac to test.
+3. Intel: the `.dmg` is built by CI (`macos-intel` job, `macos-15-intel`, allowed to fail without stopping a release) and `install.sh` picks it on an Intel Mac. It was never run: no Intel Mac to test on, and a macOS virtual machine on other hardware is not allowed by Apple's licence.
 4. What `docs/COMPATIBILITY.md` marks as not run: macOS 13 to 26, a switch to
    Ethernet, the IPv6 block with a WireGuard® file carrying only IPv4, the
    service stopped normally with a tunnel up, start at login, notifications, a

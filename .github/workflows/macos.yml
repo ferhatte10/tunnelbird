@@ -34,7 +34,18 @@ permissions:
 
 jobs:
   dmg:
-    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            experimental: false
+          # Intel: built here, never run on a real Mac (docs/MACOS.md): a failure does not block.
+          - runner: macos-15-intel
+            experimental: true
+    name: dmg (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    continue-on-error: ${{ matrix.experimental }}
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -55,13 +66,13 @@ jobs:
         run: apple/make-dmg.sh
 
       - name: Check it
-        run: apple/smoke.sh apple/build/Tunnelbird-*-arm64.dmg
+        run: apple/smoke.sh apple/build/Tunnelbird-*-"$(uname -m)".dmg
 
       # The script a visitor runs, pointed at a folder instead of GitHub.
       - name: Install it with install.sh
         run: |
           mkdir release
-          cp apple/build/Tunnelbird-*-arm64.dmg release/
+          cp apple/build/Tunnelbird-*-"$(uname -m)".dmg release/
           (cd release && shasum -a 256 -- * > SHA256SUMS && cat SHA256SUMS)
           TUNNELBIRD_DOWNLOAD_BASE="file://$PWD/release" sh build-aux/install.sh
           test -d "$HOME/Applications/Tunnelbird.app"

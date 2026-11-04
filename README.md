@@ -146,7 +146,7 @@ It puts the app in `~/Applications`, without an administrator's password. What w
   of each version: open System Settings › Privacy & Security and choose “Open
   Anyway” (when macOS offers “Done” and “Move to Trash”, choose “Done”).
 - macOS 13 Ventura or later. Only macOS 27.2 on Apple silicon was run; Intel is
-  not built yet.
+  built by CI but never run (no Intel Mac to test on).
 
 Build it on a Mac, with the free command line tools, Rust and Homebrew
 (`brew install openvpn`):

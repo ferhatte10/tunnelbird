@@ -171,8 +171,39 @@ jobs:
           path: apple/build/Tunnelbird-*-arm64.dmg
           if-no-files-found: error
 
+  # The same for Intel Macs. Never run on a real Mac: if it fails, the release goes out without it.
+  macos-intel:
+    needs: version
+    runs-on: macos-15-intel
+    continue-on-error: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Rust (stable)
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: OpenVPN, to put in the app
+        run: brew install openvpn
+
+      - name: Build the disk image
+        run: apple/make-dmg.sh
+
+      - name: Check it
+        run: apple/smoke.sh apple/build/Tunnelbird-*-x86_64.dmg
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: macos-dmg-intel
+          path: apple/build/Tunnelbird-*-x86_64.dmg
+          if-no-files-found: error
+
   publish:
-    needs: [version, deb, rpm, bundle, macos]
+    needs: [version, deb, rpm, bundle, macos, macos-intel]
     runs-on: ubuntu-24.04
     permissions:
       contents: write

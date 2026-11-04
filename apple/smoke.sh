@@ -1,7 +1,7 @@
 #!/bin/bash
 # Checks a built disk image the way a user's Mac would meet it: the app is in it, signed, and
 # carries OpenVPN with its libraries (nothing is read from Homebrew's folders).
-# Usage: smoke.sh apple/build/Tunnelbird-VERSION-arm64.dmg
+# Usage: smoke.sh apple/build/Tunnelbird-VERSION-ARCH.dmg
 set -euo pipefail
 DMG=$1
 MOUNT=$(mktemp -d)

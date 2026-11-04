@@ -11,7 +11,7 @@
 #   - Fedora, RHEL-like…: Tunnelbird's signed DNF repository, same;
 #   - anything else, or while the repository is not published: a self-contained
 #     package (GTK and libadwaita inside) in your home folder, no administrator;
-#   - macOS (Apple silicon): the app from the release's disk image, in
+#   - macOS (Apple silicon; Intel, not tried on a real Mac yet): the app from the release's disk image, in
 #     ~/Applications, no administrator. The app asks for the administrator's
 #     password itself, once, to install its helper.
 # Administrator rights (sudo) are asked only for the steps that need them.
@@ -142,7 +142,10 @@ if [ "$(uname -s)" = Darwin ]; then
   fi
 
   arch=$(uname -m)
-  [ "$arch" = arm64 ] || fail "The macOS app is built for Apple silicon (arm64); this Mac is $arch."
+  case $arch in
+    arm64|x86_64) ;;
+    *) fail "There is no macOS app for $arch (Apple silicon and Intel only)." ;;
+  esac
   major=$(sw_vers -productVersion 2> /dev/null | cut -d. -f1)
   [ "${major:-13}" -ge 13 ] 2> /dev/null || fail "Tunnelbird needs macOS 13 or later."
   for tool in curl hdiutil shasum; do
@@ -151,6 +154,7 @@ if [ "$(uname -s)" = Darwin ]; then
 
   say "Installing Tunnelbird"
   note "System: macOS $(sw_vers -productVersion 2> /dev/null) ($arch)"
+  [ "$arch" = x86_64 ] && note "Warning: the Intel version is new and has not been tried on a real Mac yet."
   [ "$dry_run" = true ] && note "Dry run: nothing will be changed."
   tmp=$(mktemp -d)
   trap 'hdiutil detach -quiet "$tmp/disk" 2> /dev/null || true; rm -rf "$tmp"' EXIT

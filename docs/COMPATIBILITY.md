@@ -113,7 +113,7 @@ with the app installed from its `.dmg` built on that Mac.
 | Item | Status | Details |
 |---|---|---|
 | Apple silicon | **Tested** | macOS 27.2 |
-| Intel | Planned | Not built: no Intel Mac to test on |
+| Intel | Built (CI, `.dmg` x86_64), never run | Needs a real Intel Mac to test |
 | macOS 13 to 26 | Expected | The target is 13; only 27.2 was run |
 | WireGuard® tunnels | **Tested** | Routes, DNS, public IP, disconnection, Wi-Fi change, a website on the server's own address |
 | OpenVPN tunnels | **Tested** | Certificates inline and as separate files, user name and password, routes and DNS pushed by the server, with the OpenVPN inside the app |
