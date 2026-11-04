@@ -41,7 +41,8 @@ license() { # name formula file
   cat "$(brew --prefix "$2")/$3" > "$RESOURCES/Licenses/$1.txt"
 }
 license OpenVPN openvpn COPYING
-license OpenSSL openssl@4 LICENSE.txt
+# The OpenSSL version differs between Homebrew installations (openssl@3, openssl@4): ask openvpn.
+license OpenSSL "$(brew deps --1 openvpn | grep '^openssl@' | head -n1)" LICENSE.txt
 license LZO lzo COPYING
 license LZ4 lz4 LICENSE
 license pkcs11-helper pkcs11-helper COPYING
